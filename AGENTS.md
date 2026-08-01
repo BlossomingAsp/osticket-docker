@@ -3,10 +3,12 @@
 Self-hosted osTicket helpdesk stack: a custom PHP 8.3 Apache image + MariaDB, orchestrated with docker-compose.
 
 ## Commands
-- First run: `./install.sh` — creates `.env` (prompts for DB passwords; `-y` auto-generates), builds the image, and starts the stack. Manual alternative: `cp .env.example .env`, set the DB passwords, then `docker compose up -d --build`
+- First run: `./install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, and starts the stack. Non-interactive: `-y --auto` (auto-setup) or `-y --manual`. Manual alternative: `cp .env.example .env`, set the DB passwords (and `OSTICKET_*` if wanted), then `docker compose up -d --build`
 - Validate compose: `docker compose config`
-- Install is a manual web wizard: browse to `http://localhost:8080/setup/` (DB host `db`, creds from `.env`); there is no auto-install entrypoint
-- After the wizard writes `include/ost-config.php`, `docker/entrypoint.sh` auto-deletes `/var/www/html/setup` on next container start — no manual hardening step
+- Two install paths:
+  - **Auto-setup** (`OSTICKET_AUTOINSTALL=1`): the entrypoint POSTs the official wizard on first boot (`prereq` → `config` → `install`) using `OSTICKET_*` vars (helpdesk name/email, language, timezone, admin account, DB creds), then provisions plugins + OAuth instances. No browser.
+  - **Manual wizard**: browse to `http://localhost:8080/setup/` (DB host `db`, creds from `.env`). The entrypoint pre-creates `include/ost-config.php` from `setup/inc/ost-sampleconfig.php`, so the wizard form appears directly.
+- After install, `docker/entrypoint.sh` auto-deletes `/var/www/html/setup` on next container start (only when `OSTINSTALLED` is TRUE) — no manual hardening step. Plugins/OAuth provisioning (`docker/provision.php`) also runs on every start after install.
 - Check required PHP extensions: `docker compose exec osticket php -m`
 - Rebuild after Dockerfile changes: `docker compose up -d --build`
 
@@ -14,14 +16,19 @@ Self-hosted osTicket helpdesk stack: a custom PHP 8.3 Apache image + MariaDB, or
 - Do NOT use the official `osticket/osticket` hub image; it is stale (PHP 7 era) and osTicket v1.18.4 requires PHP 8.2–8.4. Use the repo `Dockerfile`.
 - Image is pinned to `php:8.3-apache-bookworm`. Do NOT unpin: default `php:8.3-apache` tracks Debian trixie, where `libc-client-dev` (needed to build the `imap` extension) no longer exists. `imap` is bundled in PHP 8.3 but moved to PECL in 8.4.
 - DB must be MariaDB, not MySQL 8 — MySQL 8's `caching_sha2_password` auth breaks osTicket's installer.
-- `include/` is a named volume (`osticket_data`), so `ost-config.php`, plugins, and language packs persist, but the volume shadows the image's `include/`: rebuilding the image does NOT update files already in the volume.
-- osTicket version is `OSTICKET_VERSION` in `.env` (default `1.18.4`), passed as a build arg; PHP version is the base image tag in `Dockerfile`.
+- `include/` is a named volume (`osticket_data`), so `ost-config.php`, plugins, and language packs persist, but the volume shadows the image's `include/`: rebuilding the image does NOT update files already in the volume. Plugin files are therefore re-copied from `/opt/osticket-plugins` (in the image) into `include/plugins/` on every start — they DO update on rebuild.
+- osTicket version is `OSTICKET_VERSION` in `.env` (default `1.18.4`), passed as a build arg; PHP version is the base image tag in `Dockerfile`. Plugins come from osTicket-plugins 1.17.x pinned to commit `adfef05` (`PLUGINS_COMMIT` build arg), hydrated with composer deps at build time.
 - `OSTICKET_TRUSTED_PROXIES` (`.env`, optional) is injected into `include/ost-config.php`'s `TRUSTED_PROXIES` define on container start — set it (proxy IP/CIDR list) for reverse-proxy/HTTPS deployments. HTTPS detection needs no config: osTicket reads `X-Forwarded-Proto` directly.
+- OAuth/OIDC: each configured provider (Pocket ID/Google/Discord) is one auth-oauth2 plugin instance, created by `docker/provision.php` via the plugin API (`PluginManager::install` + `addInstance`). Client secrets go through the plugin config form (encrypted). Redirect URI is always `<helpdesk URL>/api/auth/oauth2`; register it in each IdP app. Provider is only provisioned when its `CLIENT_ID` is non-empty.
+- Plugin names in `OSTICKET_PLUGINS` are the image dir names `auth-oauth2`/`auth-2fa` (NOT `oauth2`/`2fa`) — the entrypoint copies `/opt/osticket-plugins/<name>` and provision.php installs by the same name.
+- Provisioning pitfalls in `docker/provision.php` (all fixed, don't regress): it must run the full CLI bootstrap (`Bootstrap::loadConfig(); defineTables(TABLE_PREFIX); loadCode(); connect(); osTicket::start()`) — `require bootstrap.php` alone does NOT define `OSTINSTALLED` (only `include/class.cli.php` calls `loadConfig`); set `$_SERVER['REQUEST_METHOD']='POST'` or the config forms merge the empty saved config over your `$vars` (clientSecret validation fails); and do NOT re-fetch plugins via `PluginManager::allInstalled()` right after install/activate — osTicket's ORM caches query results so you get stale `isactive=0` rows, reuse the `ensure_plugin()` return values instead.
+- `OSTICKET_AUTOINSTALL=1` requires `OSTICKET_HELPDESK_NAME`, `OSTICKET_DEFAULT_EMAIL`, `OSTICKET_ADMIN_EMAIL/USERNAME/PASSWORD`, and `MARIADB_DATABASE/USER/PASSWORD` (passed to the osticket service). Admin username must not be `admin`/`admins`/`username`/`osticket`; admin email must differ from the default system email. The wizard install uses `prefix=ost_`, `dbhost=db`, timezone from `OSTICKET_TIMEZONE`.
 - Secrets live in `.env` (gitignored); never commit it. Changes to `.env` require `docker compose up -d` to re-apply.
 
 ## Layout
-- `Dockerfile` — PHP 8.3 Apache (bookworm) + osTicket extensions (gd, gettext, imap, intl, mysqli, pdo_mysql, zip, apcu); app source downloaded from the GitHub release zip (`upload/` → `/var/www/html`)
-- `docker/entrypoint.sh` — auto-removes `/var/www/html/setup` once installation is complete; execs `apache2-foreground`
-- `install.sh` — creates `.env` (prompts, `-y` non-interactive, `--dry-run`), builds, starts
-- `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`
-- `.env.example` — config template
+- `Dockerfile` — two stages: `plugin-builder` (php:8.3-cli-bookworm; downloads osTicket-plugins, runs `make.php hydrate`, keeps `auth-oauth2` + `auth-2fa` in `/opt/osticket-plugins/`) and the runtime image (php:8.3-apache-bookworm + osTicket extensions gd/gettext/imap/intl/mysqli/pdo_mysql/zip/apcu; app source from GitHub release zip; plugins + `docker/provision.php` copied in)
+- `docker/entrypoint.sh` — pre-creates `ost-config.php`, auto-installs via wizard when `OSTICKET_AUTOINSTALL=1`, removes `/setup` when installed, injects `TRUSTED_PROXIES`, copies plugins into the include volume, runs `/opt/osticket-provision.php`, execs `apache2-foreground`
+- `docker/provision.php` — bootstraps osTicket (like `manage.php`) and uses `PluginManager::install()`/`addInstance()` to install/activate plugins and create the OAuth2 (Pocket ID/Google/Discord) + 2FA instances from `OSTICKET_*` env vars
+- `install.sh` — mode question (`--auto`/`--manual`), prompts DB + auto-setup vars, writes `.env` (prompts, `-y` non-interactive, `--dry-run`), builds, starts
+- `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`, all `OSTICKET_*`/`MARIADB_*` vars passed to the osticket service
+- `.env.example` — config template documenting every variable

@@ -1,3 +1,27 @@
+# Stage: bundle osTicket community plugins (hydrated with their composer
+# deps) so the runtime image can provision them into the include/ volume.
+FROM php:8.3-cli-bookworm AS plugin-builder
+
+# Pinned commit on the osTicket-plugins 1.17.x branch (targets the 1.18 API).
+ARG PLUGINS_COMMIT=adfef052c2aeab4d67e4892c30d2ede27e6ea627
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends unzip curl; \
+    rm -rf /var/lib/apt/lists/*
+
+# make.php hydrate resolves the plugins' composer deps (league/oauth2-client,
+# sonata/google-authenticator, ...) into each plugin folder's lib/.
+RUN set -eux; \
+    curl -fsSL -o /tmp/plugs.zip \
+        "https://codeload.github.com/osTicket/osTicket-plugins/zip/${PLUGINS_COMMIT}"; \
+    unzip -q /tmp/plugs.zip -d /tmp; \
+    cd "/tmp/osTicket-plugins-${PLUGINS_COMMIT}"; \
+    php make.php hydrate; \
+    mkdir -p /opt/osticket-plugins; \
+    cp -r auth-oauth2 auth-2fa /opt/osticket-plugins/; \
+    rm -rf /tmp/plugs.zip "/tmp/osTicket-plugins-${PLUGINS_COMMIT}"
+
 FROM php:8.3-apache-bookworm
 
 ARG OSTICKET_VERSION=1.18.4
@@ -57,6 +81,13 @@ RUN set -eux; \
     cp -r /tmp/osticket/upload/. /var/www/html/; \
     rm -rf /tmp/osticket /tmp/osticket.zip; \
     chown -R www-data:www-data /var/www/html
+
+# Community plugins, hydrated at build time. The entrypoint copies the
+# requested ones into the include/ volume (see docker/entrypoint.sh).
+COPY --from=plugin-builder /opt/osticket-plugins /opt/osticket-plugins
+
+# Post-install provisioning script (entrypoint invokes it via `php`).
+COPY docker/provision.php /opt/osticket-provision.php
 
 COPY docker/entrypoint.sh /usr/local/bin/osticket-entrypoint
 RUN chmod +x /usr/local/bin/osticket-entrypoint

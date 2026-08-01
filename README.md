@@ -4,12 +4,15 @@ Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache i
 
 ## Quick start
 
-The easiest path is the installer script — it generates `.env` (prompting for the DB passwords, or `-y` to auto-generate random ones), builds the image, and starts the stack:
+The installer script asks whether to **auto-setup** (env-driven install + plugin/OAuth provisioning) or use the **manual web wizard**, then generates `.env`, builds the image, and starts the stack:
 
 ```sh
 ./install.sh
-# or non-interactively: ./install.sh -y [-p <port>] [-v <version>]
+# non-interactive auto-setup: ./install.sh -y --auto
+# non-interactive manual:     ./install.sh -y --manual
 ```
+
+Auto-setup (`OSTICKET_AUTOINSTALL=1`) installs osTicket automatically on first boot — helpdesk name/email, primary language, and the admin account all come from `OSTICKET_*` vars — then provisions the plugins and OAuth/OIDC sign-in configured in `.env`. No browser wizard needed.
 
 To do it by hand instead:
 
@@ -35,6 +38,8 @@ To do it by hand instead:
    | MySQL Username    | `osticket`                   |
    | MySQL Password    | the `MARIADB_PASSWORD` from `.env` |
 
+   The entrypoint pre-creates `include/ost-config.php` from the sample config, so the wizard form appears immediately (no manual config-file copy).
+
 4. On the final wizard step, osTicket prompts you to delete the `setup/` folder. This image does it for you automatically on the next container start (once `include/ost-config.php` exists), so just restart:
 
    ```sh
@@ -42,6 +47,28 @@ To do it by hand instead:
    ```
 
    Then log in at <http://localhost:8080/scp/> (the admin account you created in the wizard).
+
+## Plugins and OAuth/OIDC sign-in
+
+The image bundles two community plugins (osTicket-plugins, 1.17.x line): **auth-oauth2** (OAuth2/OIDC sign-in) and **auth-2fa** (authenticator-app two-factor auth). `OSTICKET_PLUGINS` (default `auth-oauth2,auth-2fa`) selects which are installed, activated, and provisioned on every container start.
+
+Each IdP is a separate **instance** of the auth-oauth2 plugin, created automatically from `.env` when its client ID is set:
+
+| Provider   | `.env` vars                              | Login button                  |
+|------------|------------------------------------------|-------------------------------|
+| Pocket ID  | `OSTICKET_OIDC_URL/CLIENT_ID/CLIENT_SECRET` (+ `AUTH_TARGET`) | "Sign in with Pocket ID" |
+| Google     | `OSTICKET_GOOGLE_CLIENT_ID/CLIENT_SECRET` (+ `AUTH_TARGET`)   | "Sign in with Google" |
+| Discord    | `OSTICKET_DISCORD_CLIENT_ID/CLIENT_SECRET` (+ `AUTH_TARGET`)  | "Sign in with Discord" |
+
+`AUTH_TARGET` controls who can sign in: `agents` (staff only), `users` (end users only), `all`, or `none`. The OAuth redirect URI for every provider is your helpdesk URL + `/api/auth/oauth2` — register that callback in each IdP's app (Google Cloud Console OAuth client, Discord Developer Portal OAuth2, Pocket ID OIDC client).
+
+Provider details baked in:
+
+- **Pocket ID** — generic OIDC; endpoints `…/authorize`, `…/oauth/token`, `…/userinfo`; scopes `openid profile email`; username mapped from `preferred_username` (override with `OSTICKET_OIDC_ATTR_USERNAME`).
+- **Google** — uses the plugin's built-in Google template (correct endpoints, scopes, `given_name`/`family_name` mapping); only the client ID/secret are required.
+- **Discord** — generic OAuth2 with `identify email` scopes; username/email mapped from Discord's userinfo (`username`, `email`). Discord has no given/family-name claims.
+
+OAuth client secrets are stored in `.env` (gitignored) and injected into the oauth2 plugin instance's config (stored encrypted in the `ost_config` table) by `docker/provision.php`.
 
 ## Useful commands
 
@@ -79,8 +106,9 @@ The container's internal Apache stays plain HTTP on port 80; the reverse proxy t
 
 ## Layout
 
-- `Dockerfile` — PHP 8.3 Apache + osTicket extensions (gd, gettext, imap, intl, mysqli, pdo_mysql, zip, apcu); app source downloaded from the GitHub release zip (`upload/` → `/var/www/html`)
-- `docker/entrypoint.sh` — auto-removes `/var/www/html/setup` once installation is complete
-- `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`
-- `install.sh` — creates `.env`, builds the image, starts the stack
-- `.env.example` — config template
+- `Dockerfile` — PHP 8.3 Apache + osTicket extensions (gd, gettext, imap, intl, mysqli, pdo_mysql, zip, apcu); app source from the GitHub release zip (`upload/` → `/var/www/html`); a builder stage hydrates and bundles the `auth-oauth2` + `auth-2fa` plugins
+- `docker/entrypoint.sh` — pre-creates `ost-config.php`, optionally auto-installs via the wizard (`OSTICKET_AUTOINSTALL=1`), removes `/var/www/html/setup` once installed, injects `TRUSTED_PROXIES`, copies plugins into the include volume, and runs `docker/provision.php`
+- `docker/provision.php` — installs/activates the requested plugins and creates the OAuth2 instances (Pocket ID/Google/Discord) + 2FA instance from `OSTICKET_*` env vars
+- `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`, all `OSTICKET_*`/`MARIADB_*` env vars passed to the container
+- `install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, starts the stack
+- `.env.example` — config template documenting every variable

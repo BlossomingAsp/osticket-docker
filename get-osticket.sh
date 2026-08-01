@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+# osTicket-docker bootstrap installer
+#
+# Downloads the repo source tarball for a release (default: the latest
+# GitHub release) and runs its install.sh, forwarding all arguments.
+#
+# Usage (from anywhere):
+#   curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
+#
+# To pin a specific release instead of "latest", set OSTICKET_RELEASE:
+#   OSTICKET_RELEASE=v1.0.0 sh get-osticket.sh -y --auto
+
+REPO="BlossomingAsp/osticket-docker"
+DEFAULT_TAG="v1.0.0"
+
+info()  { printf '==> %s\n' "$*"; }
+die()   { printf '[x] %s\n' "$*" >&2; exit 1; }
+
+if command -v curl >/dev/null 2>&1; then
+    fetch() { curl -fsSL "$1"; }
+elif command -v wget >/dev/null 2>&1; then
+    fetch() { wget -qO- "$1"; }
+else
+    die "curl or wget is required to download the repo"
+fi
+command -v tar >/dev/null 2>&1 || die "tar is required to unpack the repo"
+
+TAG="${OSTICKET_RELEASE:-latest}"
+if [ "$TAG" = "latest" ]; then
+    info "Resolving the latest release tag..."
+    TAG="$(fetch "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+        | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')"
+    [ -n "$TAG" ] || TAG="$DEFAULT_TAG"
+    info "Latest release: $TAG"
+fi
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT INT TERM
+
+info "Downloading osTicket-docker $TAG ..."
+fetch "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" > "$TMP/osticket-docker.tar.gz"
+tar -xzf "$TMP/osticket-docker.tar.gz" -C "$TMP" --strip-components=1
+cd "$TMP"
+
+info "Starting install.sh (passing: $*)"
+exec ./install.sh "$@"

@@ -4,7 +4,15 @@ Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache i
 
 ## Quick start
 
-The installer script asks whether to **auto-setup** (env-driven install + plugin/OAuth provisioning) or use the **manual web wizard**, then generates `.env`, builds the image, and starts the stack:
+Install straight from a [release](https://github.com/BlossomingAsp/osticket-docker/releases) — this downloads the repo and starts the installer (non-interactive auto-setup):
+
+```sh
+curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
+# manual wizard:  ... | sh -s -- -y --manual
+# pin a release:  OSTICKET_RELEASE=v1.0.0 ... | sh -s -- -y --auto
+```
+
+Or clone and run the installer script, which asks whether to **auto-setup** (env-driven install + plugin/OAuth provisioning) or use the **manual web wizard**, then generates `.env`, builds the image, and starts the stack:
 
 ```sh
 ./install.sh
@@ -111,4 +119,5 @@ The container's internal Apache stays plain HTTP on port 80; the reverse proxy t
 - `docker/provision.php` — installs/activates the requested plugins and creates the OAuth2 instances (Pocket ID/Google/Discord) + 2FA instance from `OSTICKET_*` env vars
 - `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`, all `OSTICKET_*`/`MARIADB_*` env vars passed to the container
 - `install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, starts the stack
+- `get-osticket.sh` — bootstrap installer: downloads a release source tarball and runs its `install.sh` (also attached to every release)
 - `.env.example` — config template documenting every variable

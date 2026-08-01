@@ -14,10 +14,10 @@ set -eu
 #   (GH_TOKEN must be exported so this script's downloads are authorized too)
 #
 # To pin a specific release instead of "latest", set OSTICKET_RELEASE:
-#   OSTICKET_RELEASE=v1.0.0 sh get-osticket.sh -y --auto
+#   OSTICKET_RELEASE=v1.0.1 sh get-osticket.sh -y --auto
 
 REPO="BlossomingAsp/osticket-docker"
-DEFAULT_TAG="v1.0.0"
+DEFAULT_TAG="v1.0.1"
 
 info()  { printf '==> %s\n' "$*"; }
 die()   { printf '[x] %s\n' "$*" >&2; exit 1; }

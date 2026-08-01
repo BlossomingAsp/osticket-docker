@@ -1,6 +1,6 @@
 # osTicket Docker Compose stack
 
-Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose.
+Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose. Supports one-command auto-setup (no browser) or the official manual web wizard, plus optional OAuth/OIDC single sign-on (Pocket ID, Google, Discord) and two-factor authentication.
 
 ## Quick start
 
@@ -9,7 +9,7 @@ Install straight from a [release](https://github.com/BlossomingAsp/osticket-dock
 ```sh
 curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
 # manual wizard:  ... | sh -s -- -y --manual
-# pin a release:  OSTICKET_RELEASE=v1.0.0 ... | sh -s -- -y --auto
+# pin a release:  OSTICKET_RELEASE=v1.0.1 ... | sh -s -- -y --auto
 ```
 
 > **Private repo?** GitHub only serves `releases/latest/download/...` to public repos. For a private repo, `git clone` the repo (SSH or a token URL) and run `./install.sh` locally; the bootstrap script also honors an exported `GH_TOKEN` (repo scope) for its downloads.
@@ -21,8 +21,6 @@ Or clone and run the installer script, which asks whether to **auto-setup** (env
 # non-interactive auto-setup: ./install.sh -y --auto
 # non-interactive manual:     ./install.sh -y --manual
 ```
-
-Auto-setup (`OSTICKET_AUTOINSTALL=1`) installs osTicket automatically on first boot — helpdesk name/email, primary language, and the admin account all come from `OSTICKET_*` vars — then provisions the plugins and OAuth/OIDC sign-in configured in `.env`. No browser wizard needed.
 
 To do it by hand instead:
 
@@ -58,6 +56,115 @@ To do it by hand instead:
 
    Then log in at <http://localhost:8080/scp/> (the admin account you created in the wizard).
 
+## install.sh options
+
+`install.sh` generates `.env`, builds the image, and starts the stack. It is safe to re-run: an existing `.env` is left untouched unless you confirm an overwrite (`-y` also keeps it).
+
+| Flag | Description |
+|------|-------------|
+| `-y`, `--yes` | Non-interactive: auto-generate DB passwords, skip prompts |
+| `-p`, `--port PORT` | Host HTTP port (default `8080`) |
+| `-v`, `--version V` | osTicket version to build (default `1.18.4`) |
+| `-t`, `--trusted-proxies P` | Comma-separated proxy IPs/CIDRs to trust for `X-Forwarded-*` headers (reverse-proxy/HTTPS deployments; optional) |
+| `--auto` | Force auto-setup mode (used with `-y` for scripting) |
+| `--manual` | Force manual-wizard mode (skips `OSTICKET_*` prompts) |
+| `--dry-run` | Generate `.env` and print the commands without running them |
+| `-h`, `--help` | Show help |
+
+`OSTICKET_*` and `MARIADB_*` environment variables are honored as defaults when set, so existing values are kept when `.env` is regenerated.
+
+## Configuration reference
+
+All configuration lives in `.env` (gitignored, mode 600). See `.env.example` for the latest template. Changes require `docker compose up -d` to re-apply.
+
+### MariaDB
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `MARIADB_ROOT_PASSWORD` | — | MariaDB root password |
+| `MARIADB_DATABASE` | `osticket` | osTicket database name |
+| `MARIADB_USER` | `osticket` | osTicket database user |
+| `MARIADB_PASSWORD` | — | osTicket database user's password (used in the wizard) |
+
+### osTicket
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_VERSION` | `1.18.4` | osTicket version to build (build arg) |
+| `OSTICKET_HTTP_PORT` | `8080` | Host port published to `http://localhost` |
+| `OSTICKET_TRUSTED_PROXIES` | empty | Comma-separated proxy IPs/CIDRs trusted for `X-Forwarded-*` headers (reverse-proxy/HTTPS deployments only; leave empty otherwise) |
+
+### Auto-setup
+
+Used only when `OSTICKET_AUTOINSTALL=1` (auto-setup mode).
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_AUTOINSTALL` | `0` | `1` = auto-install on first boot, `0` = manual web wizard |
+| `OSTICKET_HELPDESK_NAME` | — | Helpdesk name (required for auto-setup) |
+| `OSTICKET_DEFAULT_EMAIL` | — | Default system email (required) |
+| `OSTICKET_LANG` | `en_US` | Primary language (e.g. `en_US`, `de_DE`) |
+| `OSTICKET_TIMEZONE` | `UTC` | Default timezone (e.g. `UTC`, `Europe/Berlin`) |
+| `OSTICKET_HELPDESK_URL` | — | Public URL of the helpdesk, no trailing slash (e.g. `https://helpdesk.example.com`); used for the wizard's Helpdesk URL and OAuth redirect URI |
+
+### Admin account (created only by auto-setup)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_ADMIN_FNAME` | `Admin` | Admin first name |
+| `OSTICKET_ADMIN_LNAME` | `User` | Admin last name |
+| `OSTICKET_ADMIN_EMAIL` | — | Admin email (required; must differ from `OSTICKET_DEFAULT_EMAIL`) |
+| `OSTICKET_ADMIN_USERNAME` | — | Admin username (required; not `admin`/`admins`/`username`/`osticket`) |
+| `OSTICKET_ADMIN_PASSWORD` | — | Admin password (required) |
+
+### Plugins
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_PLUGINS` | `auth-oauth2,auth-2fa` | Comma-separated plugins to install/activate/provision. Bundled: `auth-oauth2` (OAuth2/OIDC sign-in), `auth-2fa` (authenticator-app two-factor auth) |
+
+### Pocket ID (OIDC)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_OIDC_NAME` | `Pocket ID` | Login-button display name |
+| `OSTICKET_OIDC_URL` | — | Issuer base URL (enable by setting this plus a client ID) |
+| `OSTICKET_OIDC_CLIENT_ID` | — | OIDC client ID |
+| `OSTICKET_OIDC_CLIENT_SECRET` | — | OIDC client secret (stored encrypted in the DB) |
+| `OSTICKET_OIDC_AUTH_TARGET` | `agents` | Who can sign in: `none`/`agents`/`users`/`all` |
+| `OSTICKET_OIDC_ATTR_USERNAME` | `preferred_username` | Userinfo claim used as the osTicket username |
+
+### Google OAuth
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_GOOGLE_NAME` | `Google` | Login-button display name |
+| `OSTICKET_GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
+| `OSTICKET_GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
+| `OSTICKET_GOOGLE_AUTH_TARGET` | `agents` | Who can sign in: `none`/`agents`/`users`/`all` |
+
+### Discord OAuth
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_DISCORD_NAME` | `Discord` | Login-button display name |
+| `OSTICKET_DISCORD_CLIENT_ID` | — | Discord OAuth client ID |
+| `OSTICKET_DISCORD_CLIENT_SECRET` | — | Discord OAuth client secret |
+| `OSTICKET_DISCORD_AUTH_TARGET` | `agents` | Who can sign in: `none`/`agents`/`users`/`all` |
+
+## Auto-setup
+
+When `OSTICKET_AUTOINSTALL=1`, the container installs osTicket automatically on first boot — no browser wizard needed. It POSTs the official setup wizard (`prereq` → `config` → `install`) using the `OSTICKET_*` and `MARIADB_*` values above, then provisions the plugins and OAuth/OIDC sign-in configured in `.env`.
+
+Requirements:
+
+- `OSTICKET_HELPDESK_NAME`, `OSTICKET_DEFAULT_EMAIL`, `OSTICKET_ADMIN_EMAIL`, `OSTICKET_ADMIN_USERNAME`, `OSTICKET_ADMIN_PASSWORD` (plus the `MARIADB_*` vars) must be set.
+- Admin username must not be `admin`, `admins`, `username`, or `osticket` (reserved by osTicket).
+- Admin email must differ from the default system email.
+- The install uses `prefix=ost_` and `dbhost=db` automatically.
+
+Give the container a minute or two on first boot, then log in at <http://localhost:PORT/scp/> with the admin account. The `setup/` folder is removed automatically on the next container start, and plugin/OAuth provisioning re-runs on every start (idempotent — safe to restart any time).
+
 ## Plugins and OAuth/OIDC sign-in
 
 The image bundles two community plugins (osTicket-plugins, 1.17.x line): **auth-oauth2** (OAuth2/OIDC sign-in) and **auth-2fa** (authenticator-app two-factor auth). `OSTICKET_PLUGINS` (default `auth-oauth2,auth-2fa`) selects which are installed, activated, and provisioned on every container start.
@@ -80,6 +187,24 @@ Provider details baked in:
 
 OAuth client secrets are stored in `.env` (gitignored) and injected into the oauth2 plugin instance's config (stored encrypted in the `ost_config` table) by `docker/provision.php`.
 
+To **add or change a provider later**: edit `.env`, then `docker compose up -d` — provisioning re-runs on container start and reconciles the instances.
+
+## Updating
+
+1. Bump `OSTICKET_VERSION` in `.env` (or change the `php:` base image tag in `Dockerfile`).
+2. Rebuild and restart:
+
+   ```sh
+   docker compose up -d --build
+   ```
+
+Plugin files are re-copied into the `include/` volume on container start, so plugin updates ship on rebuild. Other files already in the volume (e.g. `ost-config.php`, language packs) are **not** overwritten by a rebuild — the volume shadows the image's `include/`. Secrets live in `.env`; never commit it, and re-apply `.env` changes with `docker compose up -d`.
+
+## Backups
+
+- **Database**: `docker compose exec db mariadb-dump -u root -p osticket > osticket.sql` (prompts for `MARIADB_ROOT_PASSWORD`).
+- **Configuration & plugins**: the `osticket_data` named volume holds `include/` (config, plugins, language packs). Back it up with a volume backup (e.g. a `tar` from a temporary container mounted on the volume).
+
 ## Useful commands
 
 - Validate compose: `docker compose config`
@@ -101,7 +226,7 @@ When osTicket is served from a public domain through a TLS-terminating reverse p
 
    Comma-separate multiple proxies/CIDRs (`1.2.3.4,10.0.0.0/8`). The `*` wildcard trusts every proxy and is discouraged. The `osticket` entrypoint injects this into the volume's `ost-config.php` on container start, so `docker compose up -d` re-applies `.env` changes. Leave it empty if not behind a proxy.
 
-3. **Helpdesk URL.** During the web wizard, set the helpdesk URL to the real public address (e.g. `https://helpdesk.example.com`); email links and redirects use it. `ROOT_PATH` in `ost-config.php` is only needed if you serve osTicket under a subdirectory (e.g. `/support/`).
+3. **Helpdesk URL.** During the web wizard (or via `OSTICKET_HELPDESK_URL` in auto-setup), set the helpdesk URL to the real public address (e.g. `https://helpdesk.example.com`); email links and redirects use it. `ROOT_PATH` in `ost-config.php` is only needed if you serve osTicket under a subdirectory (e.g. `/support/`).
 
 The container's internal Apache stays plain HTTP on port 80; the reverse proxy terminates TLS and forwards to the published port (`8080`) or the container directly on the compose network.
 
@@ -111,8 +236,6 @@ The container's internal Apache stays plain HTTP on port 80; the reverse proxy t
 - The image is pinned to `php:8.3-apache-bookworm`: the un-pinned `php:8.3-apache` tag now tracks Debian trixie, where `libc-client-dev` (needed to compile PHP's `imap` extension) no longer exists.
 - DB must be MariaDB, not MySQL 8 — MySQL 8's `caching_sha2_password` auth breaks osTicket's installer.
 - `include/` is a named volume (`osticket_data`), so `ost-config.php`, plugins, and language packs persist. The volume shadows the image's `include/`: rebuilding the image does **not** update files already in the volume.
-- osTicket and PHP versions are controlled by `OSTICKET_VERSION` in `.env` and the `php:` base image tag in `Dockerfile` respectively.
-- Secrets live in `.env` (gitignored); never commit it. Changes to `.env` require `docker compose up -d` to re-apply.
 
 ## Layout
 

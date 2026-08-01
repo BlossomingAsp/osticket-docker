@@ -30,6 +30,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    environment:
+      OSTICKET_TRUSTED_PROXIES: ${OSTICKET_TRUSTED_PROXIES:-}
     ports:
       - "${OSTICKET_HTTP_PORT:-8080}:80"
     volumes:

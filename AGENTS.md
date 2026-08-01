@@ -3,7 +3,7 @@
 Self-hosted osTicket helpdesk stack: a custom PHP 8.3 Apache image + MariaDB, orchestrated with docker-compose.
 
 ## Commands
-- First run: `cp .env.example .env`, set the DB passwords, then `docker compose up -d --build`
+- First run: `./install.sh` — creates `.env` (prompts for DB passwords; `-y` auto-generates), builds the image, and starts the stack. Manual alternative: `cp .env.example .env`, set the DB passwords, then `docker compose up -d --build`
 - Validate compose: `docker compose config`
 - Install is a manual web wizard: browse to `http://localhost:8080/setup/` (DB host `db`, creds from `.env`); there is no auto-install entrypoint
 - After the wizard writes `include/ost-config.php`, `docker/entrypoint.sh` auto-deletes `/var/www/html/setup` on next container start — no manual hardening step
@@ -16,10 +16,12 @@ Self-hosted osTicket helpdesk stack: a custom PHP 8.3 Apache image + MariaDB, or
 - DB must be MariaDB, not MySQL 8 — MySQL 8's `caching_sha2_password` auth breaks osTicket's installer.
 - `include/` is a named volume (`osticket_data`), so `ost-config.php`, plugins, and language packs persist, but the volume shadows the image's `include/`: rebuilding the image does NOT update files already in the volume.
 - osTicket version is `OSTICKET_VERSION` in `.env` (default `1.18.4`), passed as a build arg; PHP version is the base image tag in `Dockerfile`.
+- `OSTICKET_TRUSTED_PROXIES` (`.env`, optional) is injected into `include/ost-config.php`'s `TRUSTED_PROXIES` define on container start — set it (proxy IP/CIDR list) for reverse-proxy/HTTPS deployments. HTTPS detection needs no config: osTicket reads `X-Forwarded-Proto` directly.
 - Secrets live in `.env` (gitignored); never commit it. Changes to `.env` require `docker compose up -d` to re-apply.
 
 ## Layout
 - `Dockerfile` — PHP 8.3 Apache (bookworm) + osTicket extensions (gd, gettext, imap, intl, mysqli, pdo_mysql, zip, apcu); app source downloaded from the GitHub release zip (`upload/` → `/var/www/html`)
 - `docker/entrypoint.sh` — auto-removes `/var/www/html/setup` once installation is complete; execs `apache2-foreground`
+- `install.sh` — creates `.env` (prompts, `-y` non-interactive, `--dry-run`), builds, starts
 - `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`
 - `.env.example` — config template

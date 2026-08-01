@@ -1,0 +1,46 @@
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set in .env}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-osticket}
+      MARIADB_USER: ${MARIADB_USER:-osticket}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set in .env}
+      MARIADB_AUTO_UPGRADE: "1"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  osticket:
+    build:
+      context: .
+      args:
+        OSTICKET_VERSION: ${OSTICKET_VERSION:-1.18.4}
+    image: osticket-docker-osticket
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${OSTICKET_HTTP_PORT:-8080}:80"
+    volumes:
+      - osticket_data:/var/www/html/include
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  db_data:
+  osticket_data:

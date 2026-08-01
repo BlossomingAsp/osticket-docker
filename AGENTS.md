@@ -4,7 +4,7 @@ Self-hosted osTicket helpdesk stack: a custom PHP 8.3 Apache image + MariaDB, or
 
 ## Commands
 - First run: `./install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, and starts the stack. Non-interactive: `-y --auto` (auto-setup) or `-y --manual`. Manual alternative: `cp .env.example .env`, set the DB passwords (and `OSTICKET_*` if wanted), then `docker compose up -d --build`
-- Bootstrap install from a release: `curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto` (`get-osticket.sh` downloads the release source tarball and runs its `install.sh`; `OSTICKET_RELEASE` pins a tag)
+- Bootstrap install from a release: `curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto` (`get-osticket.sh` downloads the release source tarball and runs its `install.sh`; `OSTICKET_RELEASE` pins a tag). NOTE: this repo is PRIVATE, so that unauthenticated URL 404s for everyone else — private users must `git clone` or export `GH_TOKEN` (the bootstrap and its downloads honor it).
 - Release workflow: `gh release create vX.Y.Z --generate-notes` (or the GitHub API with a `GITHUB_TOKEN`); attach `get-osticket.sh` as an asset so the one-liner above resolves. The bootstrap also falls back to `DEFAULT_TAG` if `/releases/latest` isn't reachable.
 - Validate compose: `docker compose config`
 - Two install paths:

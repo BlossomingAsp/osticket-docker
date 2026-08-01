@@ -9,6 +9,10 @@ set -eu
 # Usage (from anywhere):
 #   curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
 #
+# If the repo is private, the one-liner needs a token (repo scope):
+#   curl -sSL -H "Authorization: Bearer $GH_TOKEN" https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
+#   (GH_TOKEN must be exported so this script's downloads are authorized too)
+#
 # To pin a specific release instead of "latest", set OSTICKET_RELEASE:
 #   OSTICKET_RELEASE=v1.0.0 sh get-osticket.sh -y --auto
 
@@ -18,10 +22,14 @@ DEFAULT_TAG="v1.0.0"
 info()  { printf '==> %s\n' "$*"; }
 die()   { printf '[x] %s\n' "$*" >&2; exit 1; }
 
+# For private repos the API/tarball/asset requests need the token too.
+if [ -n "${GH_TOKEN:-}" ]; then
+    AUTH="Authorization: Bearer $GH_TOKEN"
+fi
 if command -v curl >/dev/null 2>&1; then
-    fetch() { curl -fsSL "$1"; }
+    fetch() { curl -fsSL ${AUTH:+-H "$AUTH"} "$1"; }
 elif command -v wget >/dev/null 2>&1; then
-    fetch() { wget -qO- "$1"; }
+    fetch() { wget -qO- --header="${AUTH:-}" "$1"; }
 else
     die "curl or wget is required to download the repo"
 fi

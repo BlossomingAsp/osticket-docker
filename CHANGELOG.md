@@ -2,6 +2,13 @@
 
 All notable changes to this project. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `install.sh` now checks the configured `OSTICKET_VERSION` against the latest osTicket release from the GitHub API and prompts to bump to it when newer. With an explicit `-v`, non-interactively, and in `--dry-run` it only reports availability — never prompts or modifies `.env`. Existing `.env` is updated in place when the update is accepted.
+- New `update.sh`: queries the latest osTicket release, shows the configured vs latest version, and on approval bumps `OSTICKET_VERSION` in `.env` and rebuilds the stack. Supports `-y` and `--dry-run`.
+
 ## [v1.0.1] - 2026-08-01
 
 ### Added

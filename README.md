@@ -191,6 +191,16 @@ To **add or change a provider later**: edit `.env`, then `docker compose up -d` 
 
 ## Updating
 
+`install.sh` checks the configured `OSTICKET_VERSION` against the latest osTicket release and prompts to bump it when newer (with an explicit `-v`, non-interactively, and in `--dry-run` it only reports — never prompts or changes `.env`). To check and update explicitly:
+
+```sh
+./update.sh            # interactive: prompt before updating
+./update.sh -y         # accept the update without prompting
+./update.sh --dry-run  # report what would change, change nothing
+```
+
+`update.sh` queries the latest release, bumps `OSTICKET_VERSION` in `.env` on approval, and rebuilds. Equivalent manual steps:
+
 1. Bump `OSTICKET_VERSION` in `.env` (or change the `php:` base image tag in `Dockerfile`).
 2. Rebuild and restart:
 
@@ -243,6 +253,7 @@ The container's internal Apache stays plain HTTP on port 80; the reverse proxy t
 - `docker/entrypoint.sh` — pre-creates `ost-config.php`, optionally auto-installs via the wizard (`OSTICKET_AUTOINSTALL=1`), removes `/var/www/html/setup` once installed, injects `TRUSTED_PROXIES`, copies plugins into the include volume, and runs `docker/provision.php`
 - `docker/provision.php` — installs/activates the requested plugins and creates the OAuth2 instances (Pocket ID/Google/Discord) + 2FA instance from `OSTICKET_*` env vars
 - `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`, all `OSTICKET_*`/`MARIADB_*` env vars passed to the container
-- `install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, starts the stack
+- `install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, starts the stack; checks the configured osTicket version against the latest release and offers to bump it
+- `update.sh` — queries the latest osTicket release, bumps `OSTICKET_VERSION` in `.env` on approval, and rebuilds the stack
 - `get-osticket.sh` — bootstrap installer: downloads a release source tarball and runs its `install.sh` (also attached to every release)
 - `.env.example` — config template documenting every variable

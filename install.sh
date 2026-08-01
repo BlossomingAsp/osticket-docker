@@ -104,6 +104,24 @@ ask() {
     fi
 }
 
+# Latest released osTicket version via the GitHub API. Emits just the version
+# number (no leading "v"); empty on failure so callers can skip the check.
+latest_osticket() {
+    command -v curl >/dev/null 2>&1 || return 1
+    curl -fsSL --max-time 15 -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/repos/osTicket/osTicket/releases/latest" 2>/dev/null \
+        | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p' | head -n 1
+}
+
+# 0 (true) if "$1" is a newer version than "$2". Dotted-version compare via
+# sort -V; tolerates an optional leading "v" on either side.
+ver_newer() {
+    local a b
+    a="${1#v}"; b="${2#v}"
+    [ -n "$a" ] && [ -n "$b" ] && [ "$a" != "$b" ] \
+        && [ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -n 1)" = "$a" ]
+}
+
 # --- existing .env handling -----------------------------------------------
 SKIP_PROMPTS=0
 if [ -f .env ]; then
@@ -158,6 +176,36 @@ else
         else
             SETUP_MODE=auto
         fi
+    fi
+fi
+
+# --- osTicket update check -------------------------------------------------
+# Compare the configured OSTICKET_VERSION against the latest upstream release
+# and offer to bump it. Never blocks the install: network/rate-limit failures
+# just warn, and non-interactive runs report without changing anything.
+if [ -z "$VERSION" ]; then
+    latest="$(latest_osticket)"
+    if [ -z "$latest" ]; then
+        warn "could not check for the latest osTicket release (offline or rate-limited); continuing with v${version}"
+    elif ver_newer "$latest" "$version"; then
+        if [ "$ASK" = 1 ] && [ "$DRY_RUN" = 0 ]; then
+            read -r -p "osTicket v${latest} is available (you have v${version}). Update to v${latest}? [y/N] " up || true
+            case "$up" in
+                y|Y)
+                    info "Using osTicket v${latest}"
+                    version="$latest"
+                    if [ "$SKIP_PROMPTS" = 1 ] && [ -f .env ]; then
+                        sed -i "s/^OSTICKET_VERSION=.*/OSTICKET_VERSION=${latest}/" .env
+                        info "Updated OSTICKET_VERSION to ${latest} in .env"
+                    fi
+                    ;;
+                *) warn "Staying on osTicket v${version}" ;;
+            esac
+        else
+            warn "osTicket v${latest} is available (you have v${version}); set OSTICKET_VERSION=${latest} in .env or run ./update.sh"
+        fi
+    else
+        info "osTicket v${version} is the latest release"
     fi
 fi
 

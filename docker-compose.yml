@@ -25,6 +25,7 @@ services:
       context: .
       args:
         OSTICKET_VERSION: ${OSTICKET_VERSION:-1.18.4}
+        OSTICKET_LANG: ${OSTICKET_LANG:-en_US}
     image: osticket-docker-osticket
     restart: unless-stopped
     depends_on:

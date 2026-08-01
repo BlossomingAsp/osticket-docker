@@ -2,6 +2,13 @@
 
 All notable changes to this project. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Language packs**: `OSTICKET_LANG` (e.g. `hu_HU`) is now bundled into the image at build time — the matching pack is downloaded from `downloads.osticket.com` (as `<short-code>.phar`, stored under the full language code) and re-synced into the `include/` volume on every container start. A fresh install now registers the pack and persists `system_language`, and `docker/provision.php` enforces `system_language = OSTICKET_LANG` on every start (previously a non-English install silently stayed `en_US` because the osTicket installer never writes `system_language`). The build fails loudly if the pack cannot be fetched.
+- `install.sh` now reports when the osTicket update check is skipped due to an explicit `-v` version.
+
 ## [v1.0.2] - 2026-08-01
 
 ### Added

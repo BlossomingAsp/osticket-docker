@@ -22,6 +22,8 @@ Or clone and run the installer script, which asks whether to **auto-setup** (env
 # non-interactive manual:     ./install.sh -y --manual
 ```
 
+Interactive auto-setup prompts for the language (default `en_US`). Non-interactive installs default to `en_US` too; to install in another language, export it up front, e.g. `OSTICKET_LANG=de_DE ./install.sh -y --auto`. See [Language packs](#language-packs) for changing it after install.
+
 To do it by hand instead:
 
 1. Configure secrets:
@@ -103,7 +105,7 @@ Used only when `OSTICKET_AUTOINSTALL=1` (auto-setup mode).
 | `OSTICKET_AUTOINSTALL` | `0` | `1` = auto-install on first boot, `0` = manual web wizard |
 | `OSTICKET_HELPDESK_NAME` | — | Helpdesk name (required for auto-setup) |
 | `OSTICKET_DEFAULT_EMAIL` | — | Default system email (required) |
-| `OSTICKET_LANG` | `en_US` | Primary language (e.g. `en_US`, `de_DE`) |
+| `OSTICKET_LANG` | `en_US` | Primary language (e.g. `en_US`, `hu_HU`, `de_DE`). The pack is bundled at image build time and this value is enforced as the system language on every container start; changing it requires a rebuild (see [Language packs](#language-packs)) |
 | `OSTICKET_TIMEZONE` | `UTC` | Default timezone (e.g. `UTC`, `Europe/Berlin`) |
 | `OSTICKET_HELPDESK_URL` | — | Public URL of the helpdesk, no trailing slash (e.g. `https://helpdesk.example.com`); used for the wizard's Helpdesk URL and OAuth redirect URI |
 
@@ -164,6 +166,16 @@ Requirements:
 - The install uses `prefix=ost_` and `dbhost=db` automatically.
 
 Give the container a minute or two on first boot, then log in at <http://localhost:PORT/scp/> with the admin account. The `setup/` folder is removed automatically on the next container start, and plugin/OAuth provisioning re-runs on every start (idempotent — safe to restart any time).
+
+## Language packs
+
+`OSTICKET_LANG` selects the osTicket UI language (e.g. `en_US`, `hu_HU`, `de_DE`). `en_US` ships with osTicket; any other language pack is downloaded from `downloads.osticket.com` and **bundled into the image at build time**, so:
+
+- A fresh install registers the pack and sets it as the system language automatically.
+- The configured language is re-asserted on every container start, so it cannot silently fall back to English.
+- Changing `OSTICKET_LANG` requires a rebuild: `docker compose up -d --build`.
+
+Packs are fetched as `<short-code>.phar` (e.g. `hu.phar`) from the `lang/<minor-version>.x/` folder matching `OSTICKET_VERSION`, then stored under the full language code (e.g. `hu_HU.phar`). A language is supported when its code exists on the download server; the build fails loudly if the pack cannot be fetched (prevents silently shipping an English-only image).
 
 ## Plugins and OAuth/OIDC sign-in
 

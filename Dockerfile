@@ -82,6 +82,26 @@ RUN set -eux; \
     rm -rf /tmp/osticket /tmp/osticket.zip; \
     chown -R www-data:www-data /var/www/html
 
+# Language pack: bundle the OSTICKET_LANG pack (from downloads.osticket.com)
+# so a fresh install can register it and persist system_language. Only en_US
+# ships as a directory in the source; other languages ship as .phar files
+# named after the short language code on S3 (e.g. hu.phar). We save it under
+# the full code (hu_HU.phar) because Internationalization::availableLanguages()
+# derives the language code from the phar basename. A copy is staged under
+# /opt/osticket-i18n so the entrypoint can re-sync it into the include/
+# volume on every start (the volume shadows the image's include/).
+ARG OSTICKET_LANG=en_US
+RUN set -eux; \
+    if [ "$OSTICKET_LANG" != "en_US" ]; then \
+        lang_short="${OSTICKET_LANG%%_*}"; \
+        lang_minor="${OSTICKET_VERSION%.*}.x"; \
+        mkdir -p /opt/osticket-i18n /var/www/html/include/i18n; \
+        curl -fsSL -o "/opt/osticket-i18n/${OSTICKET_LANG}.phar" \
+            "https://s3.amazonaws.com/downloads.osticket.com/lang/${lang_minor}/${lang_short}.phar"; \
+        cp "/opt/osticket-i18n/${OSTICKET_LANG}.phar" "/var/www/html/include/i18n/${OSTICKET_LANG}.phar"; \
+        chown www-data:www-data "/var/www/html/include/i18n/${OSTICKET_LANG}.phar"; \
+    fi
+
 # Community plugins, hydrated at build time. The entrypoint copies the
 # requested ones into the include/ volume (see docker/entrypoint.sh).
 COPY --from=plugin-builder /opt/osticket-plugins /opt/osticket-plugins

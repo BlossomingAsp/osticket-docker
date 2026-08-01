@@ -207,6 +207,8 @@ if [ -z "$VERSION" ]; then
     else
         info "osTicket v${version} is the latest release"
     fi
+else
+    info "osTicket update check skipped (explicit version -v ${VERSION})"
 fi
 
 # --- auto-setup values (only prompted/written in auto mode) ---------------

@@ -145,6 +145,19 @@ if [ -n "${OSTICKET_PLUGINS:-}" ]; then
     unset IFS
 fi
 
+# Language pack: the include/ volume shadows the image, so the bundled
+# OSTICKET_LANG phar (staged at build time under /opt/osticket-i18n) is
+# re-copied into the volume on every start -- same pattern as the plugins
+# above. This keeps an existing volume in sync after a rebuild.
+if [ -d /opt/osticket-i18n ]; then
+    mkdir -p "$DOCROOT/include/i18n"
+    for p in /opt/osticket-i18n/*.phar; do
+        [ -f "$p" ] || continue
+        cp -f "$p" "$DOCROOT/include/i18n/"
+        echo "Provisioned language pack: $(basename "$p")"
+    done
+fi
+
 # Post-install provisioning: register/enable plugins and configure the
 # OAuth2 instances from OSTICKET_* env vars. Requires an installed system.
 if [ "$INSTALLED" = 1 ]; then

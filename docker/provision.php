@@ -206,3 +206,14 @@ $tfa = $loaded['auth-2fa'] ?? null;
 logln("2fa plugin present=".($tfa ? 'yes' : 'no')." active=".($tfa && $tfa->isActive() ? 'yes' : 'no')." instances=".($tfa ? $tfa->getInstances()->count() : 0));
 if ($tfa && $tfa->isActive() && !$tfa->getInstances()->count())
     create_instance($tfa, array('name' => 'Two Factor Auth'), 'Two Factor Auth');
+
+// --- system language --------------------------------------------------------
+// The installer never persists the wizard's lang_id into system_language, so
+// enforce the declared OSTICKET_LANG here. Runs on every start (declarative,
+// like the plugin instances above and TRUSTED_PROXIES in the entrypoint).
+$lang = get_env('OSTICKET_LANG');
+$current = $cfg->getPrimaryLanguage();
+if ($lang && $current !== $lang) {
+    $cfg->set('system_language', $lang);
+    logln("system_language set to '$lang' (was '$current')");
+}

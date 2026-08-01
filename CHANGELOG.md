@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [v1.0.2] - 2026-08-01
 
 ### Added
 
@@ -42,5 +42,6 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - Initial tagged release of the custom PHP 8.3 Apache image + MariaDB stack.
 
+[v1.0.2]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.2
 [v1.0.1]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.1
 [v1.0.0]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.0

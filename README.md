@@ -9,7 +9,7 @@ Install straight from a [release](https://github.com/BlossomingAsp/osticket-dock
 ```sh
 curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
 # manual wizard:  ... | sh -s -- -y --manual
-# pin a release:  OSTICKET_RELEASE=v1.0.1 ... | sh -s -- -y --auto
+# pin a release:  OSTICKET_RELEASE=v1.0.2 ... | sh -s -- -y --auto
 ```
 
 > **Private repo?** GitHub only serves `releases/latest/download/...` to public repos. For a private repo, `git clone` the repo (SSH or a token URL) and run `./install.sh` locally; the bootstrap script also honors an exported `GH_TOKEN` (repo scope) for its downloads.

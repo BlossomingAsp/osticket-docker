@@ -2,6 +2,8 @@
 
 Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose. Supports one-command auto-setup (no browser) or the official manual web wizard, plus optional OAuth/OIDC single sign-on (Pocket ID, Google, Discord) and two-factor authentication.
 
+> **Deep dive:** want to understand *how it all works* — every component, every env var, the data flows, and the known gotchas? Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). This README is the practical install/config guide; that document is the technical reference.
+
 ## Quick start
 
 Install straight from a [release](https://github.com/BlossomingAsp/osticket-docker/releases) — this downloads the repo and starts the installer (non-interactive auto-setup):
@@ -237,7 +239,7 @@ Message: I need help with my account
 2. Enable **Message Content Intent** under Bot → Privileged Gateway Intents (required to read messages).
 3. Invite it (OAuth2 → URL Generator, scope `bot`) with permissions: **Send Messages**, **Add Reactions**, **Read Message History**, **View Channels**.
 4. Copy the channel's ID (right-click → Copy Channel ID).
-5. Create an osTicket API key: **Admin → Manage → API Keys → Add New API Key** — set the IP to `0.0.0.0/0` (or the docker subnet) and enable **Can create tickets**.
+5. Create an osTicket API key: **Admin → Manage → API Keys → Add New API Key** — set the IP to `172.30.0.10` (the discord-bot container's **static** IP; osTicket binds API keys to an exact client IP, so a subnet/CIDR will not work) and enable **Can create tickets**.
 6. Set in `.env`:
    ```sh
    OSTICKET_DISCORD_BOT_TOKEN=<bot token>

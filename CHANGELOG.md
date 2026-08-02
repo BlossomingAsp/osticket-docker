@@ -8,6 +8,11 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - **Release channels**: `get-osticket.sh` now supports `OSTICKET_CHANNEL=stable|experimental` (default `stable`). The `experimental` channel resolves the latest GitHub **prerelease** and falls back to stable until the first one exists; experimental features are developed on the `experimental` branch and cut as prerelease tags from it (e.g. `v1.1.0-exp.1`). `OSTICKET_RELEASE` still pins a specific tag regardless of channel.
 - **Discord ticket bot** (experimental): a `discord-bot` compose service that turns `!ticket` messages in a Discord channel into osTicket tickets (via the REST API) and mirrors the ticket status back onto the message as reactions. The bot polls `ost_ticket`/`ost_ticket_status` on a configurable interval and updates reactions using a configurable `OSTICKET_DISCORD_STATUS_EMOJIS` map. Mapping (`discord message ↔ ticket`) is stored in a new `ost_discord_ticket_map` table, auto-created on start. See README for the full setup checklist.
+- `docs/ARCHITECTURE.md`: a comprehensive technical reference covering every component, all environment variables, data flows, and known issues.
+
+### Changed
+
+- The `discord-bot` now runs on a static IP (`172.30.0.10`) on a dedicated compose subnet, because osTicket API keys are bound to an exact client IP (a CIDR/wildcard will not authenticate). The API key's IP field must be set to `172.30.0.10`.
 
 ## [v1.0.3] - 2026-08-02
 

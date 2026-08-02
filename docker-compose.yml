@@ -83,6 +83,12 @@ services:
         condition: service_healthy
       osticket:
         condition: service_healthy
+    # Static IP: osTicket API keys are bound to an exact client IP (the lookup
+    # is `WHERE apikey=? AND ipaddr=<REMOTE_ADDR>`), so the bot must have a
+    # stable address to create the API key against. This is 172.30.0.10.
+    networks:
+      default:
+        ipv4_address: 172.30.0.10
     environment:
       DISCORD_BOT_TOKEN: ${OSTICKET_DISCORD_BOT_TOKEN:-}
       DISCORD_CHANNEL_ID: ${OSTICKET_DISCORD_CHANNEL_ID:-0}
@@ -103,3 +109,11 @@ services:
 volumes:
   db_data:
   osticket_data:
+
+networks:
+  default:
+    # Explicit subnet so the discord-bot service can hold a stable IP
+    # (172.30.0.10) for its osTicket API key.
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

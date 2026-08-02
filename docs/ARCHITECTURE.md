@@ -248,8 +248,8 @@ re-apply (and `--build` for anything baked into the image).
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `OSTICKET_AUTOINSTALL` | `0` | `1` = drive the web wizard on first boot; `0` = manual wizard |
-| `OSTICKET_HELPDESK_NAME` | — | Helpdesk name (required for auto-setup) |
-| `OSTICKET_DEFAULT_EMAIL` | — | Default system email (required) |
+| `OSTICKET_HELPDESK_NAME` | `Help Desk` | Helpdesk name (falls back to default if blank) |
+| `OSTICKET_DEFAULT_EMAIL` | `helpdesk@localhost` | Default system email (falls back to default if blank) |
 | `OSTICKET_LANG` | `en_US` | Primary language; pack bundled at build time; enforced as system language on every start |
 | `OSTICKET_TIMEZONE` | `UTC` | Default timezone |
 | `OSTICKET_HELPDESK_URL` | — | Public helpdesk URL (no trailing slash); used for the wizard and OAuth redirect URIs |
@@ -257,7 +257,8 @@ re-apply (and `--build` for anything baked into the image).
 ### 8.4 Admin account (auto-setup only)
 
 `OSTICKET_ADMIN_FNAME` (default `Admin`), `OSTICKET_ADMIN_LNAME` (default
-`User`), `OSTICKET_ADMIN_EMAIL`, `OSTICKET_ADMIN_USERNAME`, `OSTICKET_ADMIN_PASSWORD`.
+`User`), `OSTICKET_ADMIN_EMAIL` (default `admin@localhost`), `OSTICKET_ADMIN_USERNAME`
+(default `admin1`), `OSTICKET_ADMIN_PASSWORD` (always randomly generated when blank).
 Constraints: admin email ≠ default system email; admin username not one of
 `admin`/`admins`/`username`/`osticket`.
 

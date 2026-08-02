@@ -8,6 +8,10 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - **Release channels**: `get-osticket.sh` now supports `OSTICKET_CHANNEL=stable|experimental` (default `stable`). The `experimental` channel resolves the latest GitHub **prerelease** and falls back to stable until the first one exists; experimental features are developed on the `experimental` branch and cut as prerelease tags from it (e.g. `v1.1.0-exp.1`). `OSTICKET_RELEASE` still pins a specific tag regardless of channel.
 
+### Fixed
+
+- The one-liner bootstrap (`curl ... | sh -s -- -y --auto`) no longer fails with "helpdesk name required for auto-setup": the four required auto-setup fields now fall back to defaults (`Help Desk` / `helpdesk@localhost` / `admin@localhost` / `admin1`) when left blank, both non-interactively and when pressing Enter at an interactive prompt. Explicit `OSTICKET_*` exports still win.
+
 ## [v1.0.3] - 2026-08-02
 
 ### Added

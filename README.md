@@ -29,6 +29,8 @@ Or clone and run the installer script, which asks whether to **auto-setup** (env
 
 Interactive auto-setup prompts for the language (default `en_US`). Non-interactive installs default to `en_US` too; to install in another language, export it up front, e.g. `OSTICKET_LANG=de_DE ./install.sh -y --auto`. See [Language packs](#language-packs) for changing it after install.
 
+The four required auto-setup fields fall back to sane defaults when left blank (so the one-liner works out of the box): helpdesk name `Help Desk`, default system email `helpdesk@localhost`, admin email `admin@localhost`, admin username `admin1` (the admin *password* is always randomly generated and stored in `.env`). Override any of them by exporting the matching `OSTICKET_*` variable (see [Configuration](#configuration)), e.g. `OSTICKET_HELPDESK_NAME="Acme Support" OSTICKET_ADMIN_USERNAME=aspen ./install.sh -y --auto`.
+
 To do it by hand instead:
 
 1. Configure secrets:
@@ -108,8 +110,8 @@ Used only when `OSTICKET_AUTOINSTALL=1` (auto-setup mode).
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `OSTICKET_AUTOINSTALL` | `0` | `1` = auto-install on first boot, `0` = manual web wizard |
-| `OSTICKET_HELPDESK_NAME` | — | Helpdesk name (required for auto-setup) |
-| `OSTICKET_DEFAULT_EMAIL` | — | Default system email (required) |
+| `OSTICKET_HELPDESK_NAME` | `Help Desk` | Helpdesk name (defaults to `Help Desk` if blank) |
+| `OSTICKET_DEFAULT_EMAIL` | `helpdesk@localhost` | Default system email (defaults to `helpdesk@localhost` if blank) |
 | `OSTICKET_LANG` | `en_US` | Primary language (e.g. `en_US`, `hu_HU`, `de_DE`). The pack is bundled at image build time and this value is enforced as the system language on every container start; changing it requires a rebuild (see [Language packs](#language-packs)) |
 | `OSTICKET_TIMEZONE` | `UTC` | Default timezone (e.g. `UTC`, `Europe/Berlin`) |
 | `OSTICKET_HELPDESK_URL` | — | Public URL of the helpdesk, no trailing slash (e.g. `https://helpdesk.example.com`); used for the wizard's Helpdesk URL and OAuth redirect URI |
@@ -120,9 +122,9 @@ Used only when `OSTICKET_AUTOINSTALL=1` (auto-setup mode).
 |----------|---------|---------|
 | `OSTICKET_ADMIN_FNAME` | `Admin` | Admin first name |
 | `OSTICKET_ADMIN_LNAME` | `User` | Admin last name |
-| `OSTICKET_ADMIN_EMAIL` | — | Admin email (required; must differ from `OSTICKET_DEFAULT_EMAIL`) |
-| `OSTICKET_ADMIN_USERNAME` | — | Admin username (required; not `admin`/`admins`/`username`/`osticket`) |
-| `OSTICKET_ADMIN_PASSWORD` | — | Admin password (required) |
+| `OSTICKET_ADMIN_EMAIL` | `admin@localhost` | Admin email (defaults to `admin@localhost` if blank; must differ from `OSTICKET_DEFAULT_EMAIL`) |
+| `OSTICKET_ADMIN_USERNAME` | `admin1` | Admin username (defaults to `admin1` if blank; not `admin`/`admins`/`username`/`osticket`) |
+| `OSTICKET_ADMIN_PASSWORD` | — | Admin password (required; randomly generated and stored in `.env` if blank) |
 
 ### Plugins
 
@@ -165,7 +167,7 @@ When `OSTICKET_AUTOINSTALL=1`, the container installs osTicket automatically on 
 
 Requirements:
 
-- `OSTICKET_HELPDESK_NAME`, `OSTICKET_DEFAULT_EMAIL`, `OSTICKET_ADMIN_EMAIL`, `OSTICKET_ADMIN_USERNAME`, `OSTICKET_ADMIN_PASSWORD` (plus the `MARIADB_*` vars) must be set.
+- `OSTICKET_ADMIN_PASSWORD` (plus the `MARIADB_*` vars) must be set; the four other auto-setup fields default if left blank (see tables above).
 - Admin username must not be `admin`, `admins`, `username`, or `osticket` (reserved by osTicket).
 - Admin email must differ from the default system email.
 - The install uses `prefix=ost_` and `dbhost=db` automatically.

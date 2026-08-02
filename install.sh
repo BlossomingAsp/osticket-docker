@@ -239,6 +239,16 @@ DISCORD_CLIENT_ID="${OSTICKET_DISCORD_CLIENT_ID:-}"
 DISCORD_CLIENT_SECRET="${OSTICKET_DISCORD_CLIENT_SECRET:-}"
 DISCORD_AUTH_TARGET="${OSTICKET_DISCORD_AUTH_TARGET:-agents}"
 
+# Sensible defaults for the required auto-setup fields, so an empty prompt
+# (pressing Enter interactively or a bare non-interactive run) still produces
+# a working install. Explicit OSTICKET_* exports or typed input always win.
+if [ "$SETUP_MODE" = auto ]; then
+    : "${HELPDESK_NAME:=Help Desk}"
+    : "${DEFAULT_EMAIL:=helpdesk@localhost}"
+    : "${ADMIN_EMAIL:=admin@localhost}"
+    : "${ADMIN_USERNAME:=admin1}"
+fi
+
 if [ "$SKIP_PROMPTS" = 0 ] && [ "$SETUP_MODE" = auto ]; then
     AUTOINSTALL=1
     info "Auto-setup selected; prompting for installation details"

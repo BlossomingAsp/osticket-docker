@@ -22,6 +22,12 @@ set -eu
 #   experimental  -> latest experimental prerelease (falls back to stable)
 # The experimental channel tracks the `experimental` branch's prerelease tags
 # (e.g. v1.1.0-exp.1). Expect breakage; not for production.
+#
+# Files are downloaded and extracted into ./osticket-docker/ (in the current
+# directory) and kept there, so you keep a local copy of the stack to update
+# and manage afterwards. Override the location with OSTICKET_DIR. If the
+# current directory is not writable, a temp directory is used and removed on
+# exit instead.
 
 REPO="BlossomingAsp/osticket-docker"
 DEFAULT_TAG="v1.0.4"
@@ -81,13 +87,22 @@ if [ "$TAG" = "latest" ]; then
     info "Channel '$CHANNEL' -> release $TAG"
 fi
 
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT INT TERM
+TMP=""
+DIR="${OSTICKET_DIR:-./osticket-docker}"
+if ! mkdir -p "$DIR" 2>/dev/null; then
+    # Current directory not writable (or OSTICKET_DIR invalid) — fall back to
+    # a temp directory that is cleaned up on exit.
+    TMP="$(mktemp -d)"
+    DIR="$TMP"
+    trap 'rm -rf "$TMP"' EXIT INT TERM
+    info "Cannot write to ./osticket-docker; using temp dir $DIR"
+fi
 
 info "Downloading osTicket-docker $TAG ..."
-fetch "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" > "$TMP/osticket-docker.tar.gz"
-tar -xzf "$TMP/osticket-docker.tar.gz" -C "$TMP" --strip-components=1
-cd "$TMP"
+fetch "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" > "$DIR/osticket-docker.tar.gz"
+tar -xzf "$DIR/osticket-docker.tar.gz" -C "$DIR" --strip-components=1
+rm -f "$DIR/osticket-docker.tar.gz"
+cd "$DIR"
 
 info "Starting install.sh (passing: $*)"
 exec ./install.sh "$@"

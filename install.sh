@@ -63,6 +63,15 @@ done
 command -v docker >/dev/null 2>&1 || die "docker not found in PATH"
 docker compose version >/dev/null 2>&1 || die "docker compose plugin not available"
 
+# When installed via a pipe (`curl ... | sh`), stdin is not a terminal, so
+# every `read` prompt below would get EOF and silently fall back to defaults
+# (or worse, appear to hang). Detect that and switch to non-interactive mode.
+if [ "$ASK" = 1 ] && ! [ -t 0 ]; then
+    ASK=0
+    SETUP_MODE="${SETUP_MODE:-auto}"
+    info "stdin is not a terminal; running non-interactively (pass -y explicitly to suppress)"
+fi
+
 gen_password() {
     if command -v openssl >/dev/null 2>&1; then
         openssl rand -hex 16

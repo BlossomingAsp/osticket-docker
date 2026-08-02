@@ -12,7 +12,7 @@ Install straight from a [release](https://github.com/BlossomingAsp/osticket-dock
 ```sh
 curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
 # manual wizard:  ... | sh -s -- -y --manual
-# pin a release:  OSTICKET_RELEASE=v1.0.3 ... | sh -s -- -y --auto
+# pin a release:  OSTICKET_RELEASE=v1.0.4 ... | sh -s -- -y --auto
 # experimental:   OSTICKET_CHANNEL=experimental ... | sh -s -- -y --auto
 ```
 

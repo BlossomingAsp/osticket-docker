@@ -24,7 +24,7 @@ set -eu
 # (e.g. v1.1.0-exp.1). Expect breakage; not for production.
 
 REPO="BlossomingAsp/osticket-docker"
-DEFAULT_TAG="v1.0.3"
+DEFAULT_TAG="v1.0.4"
 CHANNEL="${OSTICKET_CHANNEL:-stable}"
 
 info()  { printf '==> %s\n' "$*"; }

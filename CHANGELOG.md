@@ -4,6 +4,8 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [v1.0.4] - 2026-08-03
+
 ### Added
 
 - **Release channels**: `get-osticket.sh` now supports `OSTICKET_CHANNEL=stable|experimental` (default `stable`). The `experimental` channel resolves the latest GitHub **prerelease** and falls back to stable until the first one exists; experimental features are developed on the `experimental` branch and cut as prerelease tags from it (e.g. `v1.1.0-exp.1`). `OSTICKET_RELEASE` still pins a specific tag regardless of channel.

@@ -1,3 +1,5 @@
+# Disclaimer
+*This is a fully AI generated project at the moment, created for my own personal use. I'm sure experienced developers are able to tell from a mile away. [osTicket](https://osticket.com) is downloaded on build, that part is not vibecoded of course. Don't run this in production. Have fun!*
 # osTicket Docker Compose stack
 
 Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose. Supports one-command auto-setup (no browser) or the official manual web wizard, plus optional OAuth/OIDC single sign-on (Pocket ID, Google, Discord) and two-factor authentication.

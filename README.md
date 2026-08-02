@@ -214,6 +214,44 @@ OAuth client secrets are stored in `.env` (gitignored) and injected into the oau
 
 To **add or change a provider later**: edit `.env`, then `docker compose up -d` — provisioning re-runs on container start and reconciles the instances.
 
+## Discord ticket bot (experimental)
+
+A small Python bot turns Discord messages into osTicket tickets and mirrors the ticket's status back onto the original Discord message as reactions. Messages in the configured channel that start with `!ticket` open a ticket:
+
+```
+!ticket
+Name: John Doe
+Email: john@example.com
+Phone: 555-1234
+Channel: email
+Message: I need help with my account
+```
+
+`name`, `email` and `message` are required (the message may span multiple lines); `phone` and `channel` (preferred communication channel) are optional. Missing required fields → the bot reacts with ❌ and nothing else.
+
+**Flow:** a `!ticket` message creates a ticket via osTicket's REST API, the bot stores the Discord message ↔ ticket mapping in MariaDB, and reacts to the message with the initial status emoji. Every `OSTICKET_DISCORD_POLL_INTERVAL` seconds (default 30) the bot polls the `ost_ticket`/`ost_ticket_status` tables and updates the reaction when the ticket status changes (matching `OSTICKET_DISCORD_STATUS_EMOJIS`, case-insensitive).
+
+**Setup:**
+
+1. Create a bot at [Discord Developer Portal](https://discord.com/developers/applications) → **New Application** → **Bot** and copy the token.
+2. Enable **Message Content Intent** under Bot → Privileged Gateway Intents (required to read messages).
+3. Invite it (OAuth2 → URL Generator, scope `bot`) with permissions: **Send Messages**, **Add Reactions**, **Read Message History**, **View Channels**.
+4. Copy the channel's ID (right-click → Copy Channel ID).
+5. Create an osTicket API key: **Admin → Manage → API Keys → Add New API Key** — set the IP to `0.0.0.0/0` (or the docker subnet) and enable **Can create tickets**.
+6. Set in `.env`:
+   ```sh
+   OSTICKET_DISCORD_BOT_TOKEN=<bot token>
+   OSTICKET_DISCORD_CHANNEL_ID=<channel id>
+   OSTICKET_DISCORD_API_KEY=<osTicket api key>
+   # optional:
+   OSTICKET_TOPIC_ID=1
+   OSTICKET_DISCORD_STATUS_EMOJIS={"Megnyit":"🟢","Megoldott":"✅","Lezárt":"✅"}
+   ```
+   Status emoji keys must match the osTicket status names **in your language** (e.g. Hungarian names above for a hu_HU install).
+7. `docker compose up -d` — the `discord-bot` service starts only when token and channel are set (it exits cleanly otherwise).
+
+All `OSTICKET_DISCORD_*` variables are documented in `.env.example`. This is an **experimental** feature on the `experimental` branch; it is not part of a stable release yet.
+
 ## Updating
 
 `install.sh` checks the configured `OSTICKET_VERSION` against the latest osTicket release and prompts to bump it when newer (with an explicit `-v`, non-interactively, and in `--dry-run` it only reports — never prompts or changes `.env`). To check and update explicitly:

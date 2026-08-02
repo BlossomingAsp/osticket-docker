@@ -73,6 +73,33 @@ services:
       retries: 3
       start_period: 60s
 
+  discord-bot:
+    build:
+      context: ./docker/discord-bot
+      dockerfile: Dockerfile
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+      osticket:
+        condition: service_healthy
+    environment:
+      DISCORD_BOT_TOKEN: ${OSTICKET_DISCORD_BOT_TOKEN:-}
+      DISCORD_CHANNEL_ID: ${OSTICKET_DISCORD_CHANNEL_ID:-0}
+      DISCORD_TICKET_COMMAND: ${OSTICKET_DISCORD_TICKET_COMMAND:-!ticket}
+      OSTICKET_API_KEY: ${OSTICKET_DISCORD_API_KEY:-}
+      OSTICKET_BASE_URL: http://osticket:80
+      OSTICKET_TOPIC_ID: ${OSTICKET_TOPIC_ID:-1}
+      CHANNEL_FIELD: ${OSTICKET_DISCORD_CHANNEL_FIELD:-}
+      POLL_INTERVAL: ${OSTICKET_DISCORD_POLL_INTERVAL:-30}
+      STATUS_EMOJIS: ${OSTICKET_DISCORD_STATUS_EMOJIS:-}
+      FALLBACK_EMOJI: ${OSTICKET_DISCORD_FALLBACK_EMOJI:-📥}
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${MARIADB_DATABASE:-osticket}
+      DB_USER: ${MARIADB_USER:-osticket}
+      DB_PASSWORD: ${MARIADB_PASSWORD:?set in .env}
+
 volumes:
   db_data:
   osticket_data:

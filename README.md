@@ -216,6 +216,13 @@ OAuth client secrets are stored in `.env` (gitignored) and injected into the oau
 
 To **add or change a provider later**: edit `.env`, then `docker compose up -d` — provisioning re-runs on container start and reconciles the instances.
 
+## Roadmap
+
+- **Discord integration via bot** — a bot that turns Discord messages into osTicket tickets and mirrors ticket status as reactions is **available now on the `experimental` branch** (`docker/discord-bot/`); it will land on `main` once manually verified.
+- **n8n integration** — connect osTicket to [n8n](https://n8n.io) for workflow automation (ticket creation/updates, notifications, escalation).
+- **More messaging app integrations** — extend the Discord bot pattern to other platforms (e.g. Slack, Telegram, Matrix).
+- **osTicket 2.0** — update the base application once osTicket 2.0 is released upstream (first verifying PHP/language-pack/plugin compatibility).
+
 ## Updating
 
 `install.sh` checks the configured `OSTICKET_VERSION` against the latest osTicket release and prompts to bump it when newer (with an explicit `-v`, non-interactively, and in `--dry-run` it only reports — never prompts or changes `.env`). To check and update explicitly:

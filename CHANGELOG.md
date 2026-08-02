@@ -12,6 +12,11 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 - **Discord bot graceful shutdown**: the poll loop is cancelled and the DB connection closed on SIGTERM/SIGINT.
 - README section and commented `deploy.resources` blocks in `docker-compose.yml` documenting optional container resource limits (db 2G/2cpu, osticket 1G/2cpu, discord-bot 256M/0.5cpu).
 
+### Fixed
+
+- **Piped installs no longer silently skip prompts**: when `install.sh` runs via `curl ... | sh`, stdin is not a terminal, so every `read` prompt got EOF and silently fell back to defaults. `install.sh` now detects a non-terminal stdin and switches to non-interactive mode (`SETUP_MODE=auto` unless `--manual` is passed) with a notice instead of pretending to prompt.
+- **`get-osticket.sh` keeps its files**: the bootstrap used to extract into a `mktemp -d` temp directory that was deleted on exit, leaving no local copy of the stack. It now extracts into `./osticket-docker/` (override with `OSTICKET_DIR`) and keeps the files, so you can manage/update the stack afterwards; only a read-only current directory falls back to a cleaned-up temp dir.
+
 ## [v1.1.0-exp.1] - 2026-08-03
 
 ### Added

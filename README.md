@@ -232,7 +232,7 @@ Channel: email
 Message: I need help with my account
 ```
 
-`name`, `email` and `message` are required (the message may span multiple lines); `phone` and `channel` (preferred communication channel) are optional. Missing required fields → the bot reacts with ❌ and nothing else.
+`name`, `email` and `message` are required (the message may span multiple lines); `phone` and `channel` (preferred communication channel) are optional. Missing required fields → the bot reacts with ❌ and nothing else. A per-user cooldown (default 300s, `OSTICKET_DISCORD_RATE_LIMIT`) prevents ticket-spam; during the cooldown the bot reacts with ⏳ and ignores the request.
 
 **Flow:** a `!ticket` message creates a ticket via osTicket's REST API, the bot stores the Discord message ↔ ticket mapping in MariaDB, and reacts to the message with the initial status emoji. Every `OSTICKET_DISCORD_POLL_INTERVAL` seconds (default 30) the bot polls the `ost_ticket`/`ost_ticket_status` tables and updates the reaction when the ticket status changes (matching `OSTICKET_DISCORD_STATUS_EMOJIS`, case-insensitive).
 
@@ -289,6 +289,18 @@ Plugin files are re-copied into the `include/` volume on container start, so plu
 
 - **Database**: `docker compose exec db mariadb-dump -u root -p osticket > osticket.sql` (prompts for `MARIADB_ROOT_PASSWORD`).
 - **Configuration & plugins**: the `osticket_data` named volume holds `include/` (config, plugins, language packs). Back it up with a volume backup (e.g. a `tar` from a temporary container mounted on the volume).
+
+## Resource limits
+
+The stack ships without container resource limits so it starts on any host, however small. For production deployments on a host with enough RAM/CPU, uncomment the `deploy.resources` block under each service in `docker-compose.yml` (already placed there as commented examples). Suggested starting values for a host with ≥ 8GB RAM:
+
+| Service | Memory | CPUs |
+|---------|--------|------|
+| `db` | 2G | 2.0 |
+| `osticket` | 1G | 2.0 |
+| `discord-bot` | 256M | 0.5 |
+
+> The limits are hard caps — setting a memory limit higher than the host's available RAM will stop the container from starting, so tune them to your machine.
 
 ## Useful commands
 

@@ -29,6 +29,9 @@ class Config:
 
         # Polling + reactions
         self.poll_interval = _int("POLL_INTERVAL", 30)
+        # Minimum seconds between ticket creations per Discord user
+        # (spam/DoS guard on !ticket).
+        self.rate_limit = _int("RATE_LIMIT", 300)
         default_emojis = {
             "open": "\U0001f7e2",       # 🟢
             "assigned": "\U0001f535",   # 🔵

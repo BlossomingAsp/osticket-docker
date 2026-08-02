@@ -4,6 +4,14 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **PHP OPcache** enabled and tuned in the image (`opcache.memory_consumption=128`, `opcache.max_accelerated_files=10000`) for a clear PHP performance win.
+- **PHP/Apache hardening**: `expose_php=Off`, `ServerTokens Prod`, `ServerSignature Off`.
+- **Discord bot rate limiting**: a per-user cooldown (`OSTICKET_DISCORD_RATE_LIMIT`, default 300s) on `!ticket` — spam/DoS guard that reacts with ⏳ and ignores the request during the cooldown.
+- **Discord bot graceful shutdown**: the poll loop is cancelled and the DB connection closed on SIGTERM/SIGINT.
+- README section and commented `deploy.resources` blocks in `docker-compose.yml` documenting optional container resource limits (db 2G/2cpu, osticket 1G/2cpu, discord-bot 256M/0.5cpu).
+
 ## [v1.1.0-exp.1] - 2026-08-03
 
 ### Added

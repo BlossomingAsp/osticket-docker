@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 import discord
 
@@ -63,10 +64,28 @@ class TicketBot(discord.Client):
         self.db = db
         self.api = api
         self._poll_task = None
+        self._last_ticket_at = {}
 
     # --- lifecycle -----------------------------------------------------
     async def setup_hook(self):
         self._poll_task = asyncio.create_task(self.poll_loop())
+
+    async def close(self):
+        """Graceful shutdown: stop the poll loop, close the DB connection,
+        then let discord.py close the gateway."""
+        log.info("shutting down")
+        if self._poll_task:
+            self._poll_task.cancel()
+            try:
+                await self._poll_task
+            except asyncio.CancelledError:
+                pass
+        if self.db.conn:
+            try:
+                self.db.conn.close()
+            except Exception:
+                pass
+        await super().close()
 
     async def on_ready(self):
         log.info("Logged in as %s (channel %s)", self.user, self.cfg.channel_id)
@@ -87,12 +106,22 @@ class TicketBot(discord.Client):
             await self._react(message, "\u274c")  # ❌
             return
 
+        # Per-user cooldown on ticket creation (spam/DoS guard).
+        now = time.monotonic()
+        last = self._last_ticket_at.get(message.author.id)
+        if last is not None and now - last < self.cfg.rate_limit:
+            remaining = int(self.cfg.rate_limit - (now - last))
+            log.info("rate-limited ticket request from %s (cooldown %ss)", message.author, remaining)
+            await self._react(message, "\u23f3")  # ⏳
+            return
+
         try:
             ticket_number = await asyncio.to_thread(self.api.create_ticket, fields)
         except OsticketApiError as ex:
             log.error("failed to create ticket from message %s: %s", message.id, ex)
             await self._react(message, "\u274c")
             return
+        self._last_ticket_at[message.author.id] = now
 
         status = await asyncio.to_thread(self.db.get_status_by_number, ticket_number)
         await asyncio.to_thread(

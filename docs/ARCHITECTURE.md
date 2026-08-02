@@ -109,9 +109,13 @@ They are copied to `/opt/osticket-plugins/` in the runtime image.
    (`libc-client2007e-dev` for `imap`, `libicu-dev` for `intl`, `libzip-dev`,
    FreeType/JPEG for `gd`, …).
 2. Builds/enables the PHP extensions: `gd`, `gettext`, `imap`, `intl`,
-   `mysqli`, `pdo_mysql`, `zip`, plus `apcu` from PECL.
+   `mysqli`, `pdo_mysql`, `zip`, plus `apcu` from PECL. **OPcache** is loaded
+   (the base image ships it) and tuned via `docker/php-opcache.ini`
+   (`opcache.memory_consumption=128`, `opcache.max_accelerated_files=10000`,
+   `opcache.validate_timestamps=0`); the same file sets `expose_php=Off`.
 3. Enables Apache `mod_rewrite` + `mod_headers` (osTicket's `.htaccess` needs
-   them) and sets `ServerName localhost`.
+   them), sets `ServerName localhost`, and enables
+   `docker/apache-security.conf` (`ServerTokens Prod`, `ServerSignature Off`).
 4. Downloads the osTicket release zip for `OSTICKET_VERSION` (default
    `1.18.4`) and copies its `upload/` directory into `/var/www/html`.
 5. **Bundles the language pack** for `OSTICKET_LANG` (default `en_US`):
@@ -244,6 +248,9 @@ Message: I need help with my account
 - **Optional**: `phone`, `channel` (preferred communication channel), and a
   `subject` override.
 - Missing required fields → the bot reacts with ❌ and does nothing else.
+- **Rate limiting**: a per-user cooldown (`RATE_LIMIT`, default 300s, `0` to
+  disable) on ticket creation — a second `!ticket` from the same user within
+  the window gets ⏳ and is ignored (spam/DoS guard).
 
 ### 7.2 Ticket creation flow
 
@@ -252,6 +259,9 @@ Discord !ticket message
         │
         ▼
 bot.py: parse_ticket() ──► {name, email, phone, channel, message}
+        │
+        ├─ missing required fields ─► react ❌, stop
+        ├─ user in rate-limit cooldown ─► react ⏳, stop
         │
         ▼
 osticket_api.create_ticket()  POST http://osticket/api/tickets.json
@@ -424,6 +434,7 @@ These `.env` names map to the bot container's internal variables.
 | `OSTICKET_TOPIC_ID` | `OSTICKET_TOPIC_ID` | `1` | Help topic id for new tickets |
 | `OSTICKET_DISCORD_CHANNEL_FIELD` | `CHANNEL_FIELD` | empty | osTicket dynamic-field name for the preferred channel; empty folds it into the message |
 | `OSTICKET_DISCORD_POLL_INTERVAL` | `POLL_INTERVAL` | `30` | Seconds between status polls |
+| `OSTICKET_DISCORD_RATE_LIMIT` | `RATE_LIMIT` | `300` | Minimum seconds between ticket creations per Discord user (spam/DoS guard; `0` disables) |
 | `OSTICKET_DISCORD_STATUS_EMOJIS` | `STATUS_EMOJIS` | `{"open":"🟢","assigned":"🔵","answered":"💬","closed":"✅"}` | JSON map status-name → emoji (see §11.4) |
 | `OSTICKET_DISCORD_FALLBACK_EMOJI` | `FALLBACK_EMOJI` | `📥` | Emoji used when a new ticket's status has no mapping |
 

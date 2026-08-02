@@ -10,7 +10,10 @@ Install straight from a [release](https://github.com/BlossomingAsp/osticket-dock
 curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
 # manual wizard:  ... | sh -s -- -y --manual
 # pin a release:  OSTICKET_RELEASE=v1.0.3 ... | sh -s -- -y --auto
+# experimental:   OSTICKET_CHANNEL=experimental ... | sh -s -- -y --auto
 ```
+
+**Release channels.** `get-osticket.sh` installs from a channel, chosen with `OSTICKET_CHANNEL` (default `stable`): `stable` = latest stable release, `experimental` = latest experimental **prerelease** from the `experimental` branch (falls back to stable until the first prerelease exists). Experimental builds track new features before they're stabilized — expect breakage, don't use them in production. A specific tag always wins via `OSTICKET_RELEASE`, regardless of channel.
 
 > **Private repo?** GitHub only serves `releases/latest/download/...` to public repos. For a private repo, `git clone` the repo (SSH or a token URL) and run `./install.sh` locally; the bootstrap script also honors an exported `GH_TOKEN` (repo scope) for its downloads.
 

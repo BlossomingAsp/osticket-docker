@@ -14,10 +14,18 @@ set -eu
 #   (GH_TOKEN must be exported so this script's downloads are authorized too)
 #
 # To pin a specific release instead of "latest", set OSTICKET_RELEASE:
-#   OSTICKET_RELEASE=v1.0.2 sh get-osticket.sh -y --auto
+#   OSTICKET_RELEASE=v1.0.3 sh get-osticket.sh -y --auto
+#
+# To pick a channel instead of "latest" (stable default), set OSTICKET_CHANNEL:
+#   OSTICKET_CHANNEL=experimental sh get-osticket.sh -y --auto
+#   stable        -> latest stable release (default)
+#   experimental  -> latest experimental prerelease (falls back to stable)
+# The experimental channel tracks the `experimental` branch's prerelease tags
+# (e.g. v1.1.0-exp.1). Expect breakage; not for production.
 
 REPO="BlossomingAsp/osticket-docker"
 DEFAULT_TAG="v1.0.3"
+CHANNEL="${OSTICKET_CHANNEL:-stable}"
 
 info()  { printf '==> %s\n' "$*"; }
 die()   { printf '[x] %s\n' "$*" >&2; exit 1; }
@@ -37,11 +45,40 @@ command -v tar >/dev/null 2>&1 || die "tar is required to unpack the repo"
 
 TAG="${OSTICKET_RELEASE:-latest}"
 if [ "$TAG" = "latest" ]; then
-    info "Resolving the latest release tag..."
-    TAG="$(fetch "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
-        | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')"
+    case "$CHANNEL" in
+        stable)
+            info "Resolving the latest stable release tag..."
+            TAG="$(fetch "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+                | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
+            ;;
+        experimental)
+            info "Resolving the latest experimental prerelease tag..."
+            # List releases (newest first) and take the first prerelease.
+            # Split records at each '{', then grab the tag_name of the first
+            # record that also carries "prerelease": true.
+            TAG="$(fetch "https://api.github.com/repos/$REPO/releases?per_page=100" 2>/dev/null \
+                | awk -v RS='{' '
+                    index($0, "\"prerelease\": true") {
+                        if (match($0, /"tag_name": *"[^"]*"/)) {
+                            v = substr($0, RSTART, RLENGTH);
+                            sub(/^.*"tag_name": *"/, "", v);
+                            sub(/"$/, "", v);
+                            print v;
+                            exit;
+                        }
+                    }')"
+            if [ -z "$TAG" ]; then
+                info "No experimental prerelease yet; falling back to the latest stable release"
+                TAG="$(fetch "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+                    | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
+            fi
+            ;;
+        *)
+            die "unknown channel: $CHANNEL (expected 'stable' or 'experimental')"
+            ;;
+    esac
     [ -n "$TAG" ] || TAG="$DEFAULT_TAG"
-    info "Latest release: $TAG"
+    info "Channel '$CHANNEL' -> release $TAG"
 fi
 
 TMP="$(mktemp -d)"

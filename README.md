@@ -9,7 +9,7 @@ Install straight from a [release](https://github.com/BlossomingAsp/osticket-dock
 ```sh
 curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
 # manual wizard:  ... | sh -s -- -y --manual
-# pin a release:  OSTICKET_RELEASE=v1.0.2 ... | sh -s -- -y --auto
+# pin a release:  OSTICKET_RELEASE=v1.0.3 ... | sh -s -- -y --auto
 ```
 
 > **Private repo?** GitHub only serves `releases/latest/download/...` to public repos. For a private repo, `git clone` the repo (SSH or a token URL) and run `./install.sh` locally; the bootstrap script also honors an exported `GH_TOKEN` (repo scope) for its downloads.
@@ -198,6 +198,14 @@ Provider details baked in:
 - **Pocket ID** — generic OIDC; endpoints `…/authorize`, `…/oauth/token`, `…/userinfo`; scopes `openid profile email`; username mapped from `preferred_username` (override with `OSTICKET_OIDC_ATTR_USERNAME`).
 - **Google** — uses the plugin's built-in Google template (correct endpoints, scopes, `given_name`/`family_name` mapping); only the client ID/secret are required.
 - **Discord** — generic OAuth2 with `identify email` scopes; username/email mapped from Discord's userinfo (`username`, `email`). Discord has no given/family-name claims.
+
+### Getting provider credentials
+
+All three providers share the same rule: register the app with the exact redirect URI `<your helpdesk URL>/api/auth/oauth2`, and put the client ID + secret (plus the provider base URL for Pocket ID) into `.env`. Google and Discord reject `http://` redirect URIs, so use HTTPS (a real domain, or a tunnel like Cloudflare Tunnel/ngrok pointing at your port when testing on localhost).
+
+- **Pocket ID** — in the Pocket ID admin, create an **OIDC client** for this helpdesk; it returns a client ID, a client secret, and the Pocket ID base URL (your `OSTICKET_OIDC_URL`). Add the redirect URI to the client, set the userinfo claim used for the username in `OSTICKET_OIDC_ATTR_USERNAME` (default `preferred_username`).
+- **Google** — [Google Cloud Console](https://console.cloud.google.com/) → your project → **APIs & Services → OAuth consent screen** (configure the app, add your email as a test user), then **Credentials → Create Credentials → OAuth client ID → Web application** → add the redirect URI under *Authorized redirect URIs*. Copy the client ID and secret.
+- **Discord** — [Discord Developer Portal](https://discord.com/developers/applications) → **New Application** → **OAuth2 → General**: copy the client ID and client secret, and add the redirect URI under *Redirects*. No scopes or bot setup needed.
 
 OAuth client secrets are stored in `.env` (gitignored) and injected into the oauth2 plugin instance's config (stored encrypted in the `ost_config` table) by `docker/provision.php`.
 

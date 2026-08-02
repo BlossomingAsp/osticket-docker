@@ -4,10 +4,17 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [v1.0.3] - 2026-08-02
+
 ### Added
 
 - **Language packs**: `OSTICKET_LANG` (e.g. `hu_HU`) is now bundled into the image at build time — the matching pack is downloaded from `downloads.osticket.com` (as `<short-code>.phar`, stored under the full language code) and re-synced into the `include/` volume on every container start. A fresh install now registers the pack and persists `system_language`, and `docker/provision.php` enforces `system_language = OSTICKET_LANG` on every start (previously a non-English install silently stayed `en_US` because the osTicket installer never writes `system_language`). The build fails loudly if the pack cannot be fetched.
 - `install.sh` now reports when the osTicket update check is skipped due to an explicit `-v` version.
+- README section on where to obtain each OAuth provider's credentials (Pocket ID, Google, Discord) and the shared redirect-URI/HTTPS requirements.
+
+### Fixed
+
+- **hu_HU language pack `queue.yaml` is defective upstream**: the root queues get a non-zero `parent_id` (the "Open" queue points to itself, and My Tickets/Closed point to Open instead of being roots), which made `CustomQueue::getHierarchicalQueues()` recurse forever and the staff panel die with a memory-exhaustion 500 right after login. The image now ships a corrected `queue.yaml` override (osTicket's `DataTemplate` prefers a directory over the phar), re-synced into the `include/` volume on every start; `docker/provision.php` also repairs any circular/dangling queue `parent_id` on every start.
 
 ## [v1.0.2] - 2026-08-01
 
@@ -49,6 +56,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - Initial tagged release of the custom PHP 8.3 Apache image + MariaDB stack.
 
+[v1.0.3]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.3
 [v1.0.2]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.2
 [v1.0.1]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.1
 [v1.0.0]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.0

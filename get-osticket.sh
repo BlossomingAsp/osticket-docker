@@ -17,7 +17,7 @@ set -eu
 #   OSTICKET_RELEASE=v1.0.2 sh get-osticket.sh -y --auto
 
 REPO="BlossomingAsp/osticket-docker"
-DEFAULT_TAG="v1.0.2"
+DEFAULT_TAG="v1.0.3"
 
 info()  { printf '==> %s\n' "$*"; }
 die()   { printf '[x] %s\n' "$*" >&2; exit 1; }

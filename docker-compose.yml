@@ -2,6 +2,14 @@ services:
   db:
     image: mariadb:11.4
     restart: unless-stopped
+    # Optional resource limits (recommended for production). Only enable on a
+    # host with enough RAM/CPU -- limits above what the host has will stop the
+    # container from starting. See README -> "Resource limits".
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2g
+    #       cpus: "2.0"
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set in .env}
       MARIADB_DATABASE: ${MARIADB_DATABASE:-osticket}
@@ -28,6 +36,12 @@ services:
         OSTICKET_LANG: ${OSTICKET_LANG:-en_US}
     image: osticket-docker-osticket
     restart: unless-stopped
+    # Optional resource limits (recommended for production).
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 1g
+    #       cpus: "2.0"
     depends_on:
       db:
         condition: service_healthy

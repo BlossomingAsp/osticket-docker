@@ -68,9 +68,17 @@ RUN set -eux; \
     docker-php-ext-enable apcu; \
     rm -rf /tmp/pear
 
+# PHP/opcache + Apache hardening config (see docker/php-opcache.ini and
+# docker/apache-security.conf)
+COPY docker/php-opcache.ini /usr/local/etc/php/conf.d/99-osticket-opcache.ini
+# zz- prefix so this loads AFTER the base image's conf-enabled/security.conf,
+# whose ServerTokens OS / ServerSignature On would otherwise win.
+COPY docker/apache-security.conf /etc/apache2/conf-available/zz-osticket-security.conf
+
 # Apache: enable the modules osTicket's .htaccess relies on
 RUN set -eux; \
     a2enmod rewrite headers; \
+    a2enconf zz-osticket-security; \
     echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # osTicket source: GitHub release zip, web root is the upload/ dir

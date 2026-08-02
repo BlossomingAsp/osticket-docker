@@ -94,9 +94,13 @@ They are copied to `/opt/osticket-plugins/` in the runtime image.
    (`libc-client2007e-dev` for `imap`, `libicu-dev` for `intl`, `libzip-dev`,
    FreeType/JPEG for `gd`, …).
 2. Builds/enables the PHP extensions: `gd`, `gettext`, `imap`, `intl`,
-   `mysqli`, `pdo_mysql`, `zip`, plus `apcu` from PECL.
+   `mysqli`, `pdo_mysql`, `zip`, plus `apcu` from PECL. **OPcache** is loaded
+   (the base image ships it) and tuned via `docker/php-opcache.ini`
+   (`opcache.memory_consumption=128`, `opcache.max_accelerated_files=10000`,
+   `opcache.validate_timestamps=0`); the same file sets `expose_php=Off`.
 3. Enables Apache `mod_rewrite` + `mod_headers` (osTicket's `.htaccess` needs
-   them) and sets `ServerName localhost`.
+   them), sets `ServerName localhost`, and enables
+   `docker/apache-security.conf` (`ServerTokens Prod`, `ServerSignature Off`).
 4. Downloads the osTicket release zip for `OSTICKET_VERSION` (default
    `1.18.4`) and copies its `upload/` directory into `/var/www/html`.
 5. **Bundles the language pack** for `OSTICKET_LANG` (default `en_US`):

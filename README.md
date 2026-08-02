@@ -251,6 +251,17 @@ Plugin files are re-copied into the `include/` volume on container start, so plu
 - **Database**: `docker compose exec db mariadb-dump -u root -p osticket > osticket.sql` (prompts for `MARIADB_ROOT_PASSWORD`).
 - **Configuration & plugins**: the `osticket_data` named volume holds `include/` (config, plugins, language packs). Back it up with a volume backup (e.g. a `tar` from a temporary container mounted on the volume).
 
+## Resource limits
+
+The stack ships without container resource limits so it starts on any host, however small. For production deployments on a host with enough RAM/CPU, uncomment the `deploy.resources` block under each service in `docker-compose.yml` (already placed there as commented examples). Suggested starting values for a host with ≥ 8GB RAM:
+
+| Service | Memory | CPUs |
+|---------|--------|------|
+| `db` | 2G | 2.0 |
+| `osticket` | 1G | 2.0 |
+
+> The limits are hard caps — setting a memory limit higher than the host's available RAM will stop the container from starting, so tune them to your machine.
+
 ## Useful commands
 
 - Validate compose: `docker compose config`

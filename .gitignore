@@ -1,3 +1,5 @@
 .env
 .github_token
 *.log
+__pycache__/
+*.pyc

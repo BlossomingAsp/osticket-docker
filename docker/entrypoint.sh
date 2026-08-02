@@ -28,10 +28,10 @@ fi
 # start Apache normally.
 if [ "$INSTALLED" = 0 ] && [ "${OSTICKET_AUTOINSTALL:-0}" = "1" ]; then
     echo "Auto-installing osTicket via the setup wizard..."
-    : "${OSTICKET_HELPDESK_NAME:?OSTICKET_HELPDESK_NAME required for auto-install}"
-    : "${OSTICKET_DEFAULT_EMAIL:?OSTICKET_DEFAULT_EMAIL required for auto-install}"
-    : "${OSTICKET_ADMIN_EMAIL:?OSTICKET_ADMIN_EMAIL required for auto-install}"
-    : "${OSTICKET_ADMIN_USERNAME:?OSTICKET_ADMIN_USERNAME required for auto-install}"
+    : "${OSTICKET_HELPDESK_NAME:=Help Desk}"
+    : "${OSTICKET_DEFAULT_EMAIL:=helpdesk@localhost}"
+    : "${OSTICKET_ADMIN_EMAIL:=admin@localhost}"
+    : "${OSTICKET_ADMIN_USERNAME:=admin1}"
     : "${OSTICKET_ADMIN_PASSWORD:?OSTICKET_ADMIN_PASSWORD required for auto-install}"
     : "${MARIADB_DATABASE:?MARIADB_DATABASE required for auto-install}"
     : "${MARIADB_USER:?MARIADB_USER required for auto-install}"

@@ -14,6 +14,10 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - The `discord-bot` now runs on a static IP (`172.30.0.10`) on a dedicated compose subnet, because osTicket API keys are bound to an exact client IP (a CIDR/wildcard will not authenticate). The API key's IP field must be set to `172.30.0.10`.
 
+### Fixed
+
+- The one-liner bootstrap (`curl ... | sh -s -- -y --auto`) no longer fails with "helpdesk name required for auto-setup": the four required auto-setup fields now fall back to defaults (`Help Desk` / `helpdesk@localhost` / `admin@localhost` / `admin1`) when left blank, both non-interactively and when pressing Enter at an interactive prompt. Explicit `OSTICKET_*` exports still win.
+
 ## [v1.0.3] - 2026-08-02
 
 ### Added

@@ -1,7 +1,6 @@
 # Disclaimer
 *This is a fully AI generated project at the moment, created for my own personal use. I'm sure experienced developers are able to tell from a mile away. [osTicket](https://osticket.com) is downloaded on build, that part is not vibecoded of course. Don't run this in production. Have fun!*
 # osTicket Docker Compose stack
-
 Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose. Supports one-command auto-setup (no browser) or the official manual web wizard, plus optional OAuth/OIDC single sign-on (Pocket ID, Google, Discord) and two-factor authentication.
 
 > **Deep dive:** want to understand *how it all works* — every component, every env var, the data flows, and the known gotchas? Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). This README is the practical install/config guide; that document is the technical reference.
@@ -313,6 +312,16 @@ The container's internal Apache stays plain HTTP on port 80; the reverse proxy t
 - The image is pinned to `php:8.3-apache-bookworm`: the un-pinned `php:8.3-apache` tag now tracks Debian trixie, where `libc-client-dev` (needed to compile PHP's `imap` extension) no longer exists.
 - DB must be MariaDB, not MySQL 8 — MySQL 8's `caching_sha2_password` auth breaks osTicket's installer.
 - `include/` is a named volume (`osticket_data`), so `ost-config.php`, plugins, and language packs persist. The volume shadows the image's `include/`: rebuilding the image does **not** update files already in the volume.
+
+## License
+
+This project is licensed under the **GNU General Public License v2.0** (see [`LICENSE`](LICENSE)).
+
+- The [osTicket](https://osticket.com) application and its community plugins (`auth-oauth2`, `auth-2fa`) are GPL v2; they are downloaded at build time and not part of this repository's source.
+- The scripts, Dockerfile, compose file, and Discord bot in this repository are original (AI-generated) works, licensed GPL v2.
+- `docker/i18n/hu_HU/queue.yaml` is derived from osTicket's GPL v2 `hu_HU` language pack (with a fix for the queue `parent_id` defect).
+
+See the [LICENSE](LICENSE) file for the full terms.
 
 ## Layout
 

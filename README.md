@@ -177,6 +177,8 @@ Give the container a minute or two on first boot, then log in at <http://localho
 
 Packs are fetched as `<short-code>.phar` (e.g. `hu.phar`) from the `lang/<minor-version>.x/` folder matching `OSTICKET_VERSION`, then stored under the full language code (e.g. `hu_HU.phar`). A language is supported when its code exists on the download server; the build fails loudly if the pack cannot be fetched (prevents silently shipping an English-only image).
 
+> **Known pack bug (hu_HU):** the official Hungarian pack ships a defective `queue.yaml` where the root ticket queues reference themselves/non-zero parents, which makes the staff panel crash with a 500 (infinite recursion → PHP memory exhaustion) right after login. This image ships a corrected override and also repairs the queue hierarchy on every start, so a stock install of this stack is unaffected; the only requirement is to install from this repo's image (rebuild with `docker compose up -d --build`), not from a stale `include/` volume.
+
 ## Plugins and OAuth/OIDC sign-in
 
 The image bundles two community plugins (osTicket-plugins, 1.17.x line): **auth-oauth2** (OAuth2/OIDC sign-in) and **auth-2fa** (authenticator-app two-factor auth). `OSTICKET_PLUGINS` (default `auth-oauth2,auth-2fa`) selects which are installed, activated, and provisioned on every container start.

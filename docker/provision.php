@@ -217,3 +217,38 @@ if ($lang && $current !== $lang) {
     $cfg->set('system_language', $lang);
     logln("system_language set to '$lang' (was '$current')");
 }
+
+// --- queue parent_id cycle repair --------------------------------------------
+// The official hu_HU (and possibly other) language packs ship a queue.yaml
+// whose root queues reference themselves or another root (parent_id != 0).
+// CustomQueue::getHierarchicalQueues() then recurses forever on the resulting
+// cycle and the staff panel (/scp/) dies with a memory-exhaustion 500. The
+// image ships a corrected queue.yaml override for hu_HU (see docker/i18n), but
+// this is a declarative safety net for existing installs and any other pack
+// with the same defect: reset the parent_id of the node that closes a cycle
+// to 0 (making it a root). Only the repeated node is demoted -- children that
+// merely point into the cycle keep their parent once it becomes a valid root.
+$queue_parents = array();
+if (($res = db_query('SELECT id, parent_id FROM '.TABLE_PREFIX.'queue'))) {
+    while ($row = db_fetch_row($res))
+        $queue_parents[$row[0]] = (int) $row[1];
+}
+foreach ($queue_parents as $id => $pid) {
+    // Skip queues with no parent (already a root) or a dangling reference.
+    if (!$pid || !isset($queue_parents[$pid]))
+        continue;
+    // Walk the parent chain looking for a revisited node (a cycle). The first
+    // repeated node owns the offending parent_id edge -- reset just that one.
+    $seen = array($id => true);
+    $cur = $pid;
+    while (isset($queue_parents[$cur])) {
+        if (isset($seen[$cur])) {
+            db_query(sprintf('UPDATE '.TABLE_PREFIX.'queue SET parent_id=0 WHERE id=%d', $cur));
+            $queue_parents[$cur] = 0;
+            logln("repaired circular queue $cur parent_id -> 0");
+            break;
+        }
+        $seen[$cur] = true;
+        $cur = $queue_parents[$cur];
+    }
+}

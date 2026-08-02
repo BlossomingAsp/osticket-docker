@@ -148,13 +148,21 @@ fi
 # Language pack: the include/ volume shadows the image, so the bundled
 # OSTICKET_LANG phar (staged at build time under /opt/osticket-i18n) is
 # re-copied into the volume on every start -- same pattern as the plugins
-# above. This keeps an existing volume in sync after a rebuild.
+# above. This keeps an existing volume in sync after a rebuild. Language
+# directories under /opt/osticket-i18n (corrected default-data overrides for
+# packs that ship broken YAML, see docker/i18n) are re-copied too; osTicket's
+# DataTemplate prefers the directory override over the phar.
 if [ -d /opt/osticket-i18n ]; then
     mkdir -p "$DOCROOT/include/i18n"
     for p in /opt/osticket-i18n/*.phar; do
         [ -f "$p" ] || continue
         cp -f "$p" "$DOCROOT/include/i18n/"
         echo "Provisioned language pack: $(basename "$p")"
+    done
+    for d in /opt/osticket-i18n/*/; do
+        [ -d "$d" ] || continue
+        cp -rf "$d" "$DOCROOT/include/i18n/"
+        echo "Provisioned language pack override: $(basename "$d")"
     done
 fi
 

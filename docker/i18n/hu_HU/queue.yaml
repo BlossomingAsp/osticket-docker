@@ -1,0 +1,792 @@
+# Override for the defective queue.yaml in the official hu_HU language pack
+# (downloads.osticket.com/lang/1.18.x/hu.phar). The upstream pack sets the
+# root queues' parent_id to their own id (id 1 -> parent 1) and to 1 for the
+# My Tickets (5) and Closed (15) roots. CustomQueue::getHierarchicalQueues()
+# then recurses forever on the self-referential root and /scp/ dies with a
+# memory-exhaustion 500. osTicket's DataTemplate prefers a directory override
+# (include/i18n/hu_HU/) over the phar, so this file replaces just queue.yaml
+# at install time. The only change vs. the upstream pack is parent_id 0 for
+# queues 1, 5 and 15.
+-
+  #Basic queues for the initial ticket system. Queues installed for
+  #- Open / All
+  #- Open / Unassigned
+  #- Open / Overdue
+  #- Answered / All
+  #- My Tickets / All
+  #- Closed / All
+  #Fields:
+  #id:
+  #parent_id:
+  #flags:
+  #0x01:   FLAG_PUBLIC
+  #0x02:   FLAG_QUEUE (should be set for everything here)
+  #0x04:   FLAG_DISABLED
+  #0x08:   FLAG_INHERIT (inherit criteria from parent)
+  #0x10:   FLAG_INHERIT_COLUMNS
+  #0x20:   FLAG_INHERIT_SORTING
+  #staff_id: User owner of the queue
+  #sort:     Manual sort order
+  #title:    Display name of the queue
+  #config:   Criteria configuration
+  #filter:   Quick filter field
+  #root:     Object type of the queue listing
+  #'T':    Tickets
+  #'A':    Tasks
+---
+  id: 1
+  title: Megnyit
+  parent_id: 0
+  flags: 0x03
+  sort: 1
+  sort_id: 1
+  root: T
+  config: '[["status__state","includes",{"open":"Open"}]]'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 10
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Utolsó módosítás
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Hozzárendelt
+  sorts:
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 2
+  title: Megnyit
+  parent_id: 1
+  flags: 43
+  root: T
+  sort: 1
+  sort_id: 4
+  config: '{"criteria":[["isanswered","nset",null]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 10
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Utolsó módosítás
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Hozzárendelt
+- 
+  id: 3
+  title: Megválaszolva
+  parent_id: 1
+  flags: 43
+  root: T
+  sort: 2
+  sort_id: 4
+  config: '{"criteria":[["isanswered","set",null]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 10
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Utolsó módosítás
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Hozzárendelt
+- 
+  id: 4
+  title: Lejárt
+  parent_id: 1
+  flags: 43
+  root: T
+  sort: 3
+  sort_id: 4
+  config: '{"criteria":[["isoverdue","set",null]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 9
+      bits: 1
+      sort: 9
+      width: 150
+      heading: Határidő
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Hozzárendelt
+- 
+  id: 5
+  title: Saját jegyek
+  parent_id: 0
+  flags: 0x03
+  root: T
+  sort: 3
+  sort_id: 3
+  config: '{"criteria":[["assignee","includes",{"M":"Me","T":"One of my teams"}],["status__state","includes",{"open":"Open"}]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 10
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Utolsó frissítés
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 11
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Részleg
+  sorts:
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 6
+  title: Hozzám rendelve
+  parent_id: 5
+  flags: 43
+  root: T
+  sort: 1
+  config: '{"criteria":[["assignee","includes",{"M":"Me"}]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 10
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Utolsó frissítés
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 11
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Részleg
+  sorts:
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 7
+  title: Csapatokhoz rendelve
+  parent_id: 5
+  flags: 43
+  root: T
+  sort: 2
+  config: '{"criteria":[["assignee","!includes",{"M":"Me"}]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 10
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Utolsó frissítés
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 5
+      bits: 1
+      sort: 5
+      width: 85
+      heading: Sürgősség
+    - 
+      column_id: 14
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Csapat
+  sorts:
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 15
+  parent_id: 0
+  title: Lezárt
+  flags: 0x03
+  sort: 4
+  root: T
+  sort_id: 5
+  config: '{"criteria":[["status__state","includes",{"closed":"Closed"}]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 9
+  parent_id: 15
+  title: Ma
+  flags: 43
+  sort: 1
+  root: T
+  sort_id: 5
+  config: '{"criteria":[["closed","period","td"]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 10
+  parent_id: 15
+  title: Tegnap
+  flags: 43
+  sort: 2
+  root: T
+  sort_id: 5
+  config: '{"criteria":[["closed","period","yd"]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 11
+  parent_id: 15
+  title: Ezen a héten
+  flags: 43
+  sort: 3
+  root: T
+  sort_id: 5
+  config: '{"criteria":[["closed","period","tw"]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 12
+  parent_id: 15
+  title: Ebben a hónapban
+  flags: 43
+  sort: 4
+  root: T
+  sort_id: 5
+  config: '{"criteria":[["closed","period","tm"]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 13
+  parent_id: 15
+  title: Ebben a negyedévben
+  flags: 43
+  sort: 5
+  root: T
+  sort_id: 6
+  config: '{"criteria":[["closed","period","tq"]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id: 7
+- 
+  id: 14
+  parent_id: 15
+  title: Ebben az évben
+  flags: 43
+  sort: 6
+  root: T
+  sort_id: 7
+  config: '{"criteria":[["closed","period","ty"]],"conditions":[]}'
+  columns:
+    - 
+      column_id: 1
+      bits: 1
+      sort: 1
+      width: 100
+      heading: Jegy
+    - 
+      column_id: 7
+      bits: 1
+      sort: 2
+      width: 150
+      heading: Lezárás dátuma
+    - 
+      column_id: 3
+      bits: 1
+      sort: 3
+      width: 300
+      heading: Tárgy
+    - 
+      column_id: 4
+      bits: 1
+      sort: 4
+      width: 185
+      heading: Feladó
+    - 
+      column_id: 15
+      bits: 1
+      sort: 6
+      width: 160
+      heading: Lezárta
+  sorts:
+    - 
+      sort_id: 5
+    - 
+      sort_id: 1
+    - 
+      sort_id: 2
+    - 
+      sort_id: 3
+    - 
+      sort_id: 4
+    - 
+      sort_id: 6
+    - 
+      sort_id

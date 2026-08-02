@@ -91,6 +91,16 @@ RUN set -eux; \
 # /opt/osticket-i18n so the entrypoint can re-sync it into the include/
 # volume on every start (the volume shadows the image's include/).
 ARG OSTICKET_LANG=en_US
+
+# Corrected default-data overrides for language packs that ship broken YAML.
+# The official hu_HU pack's queue.yaml sets the root queues' parent_id to a
+# non-zero value (queue 1 points to itself), which makes
+# CustomQueue::getHierarchicalQueues() recurse forever and /scp/ die with a
+# memory-exhaustion 500. osTicket's DataTemplate prefers a directory override
+# (include/i18n/<lang>/) over the phar, so staging this next to the pack lets
+# the entrypoint re-sync it into the include/ volume like the phar itself.
+COPY docker/i18n /opt/osticket-i18n/
+
 RUN set -eux; \
     if [ "$OSTICKET_LANG" != "en_US" ]; then \
         lang_short="${OSTICKET_LANG%%_*}"; \
@@ -100,6 +110,11 @@ RUN set -eux; \
             "https://s3.amazonaws.com/downloads.osticket.com/lang/${lang_minor}/${lang_short}.phar"; \
         cp "/opt/osticket-i18n/${OSTICKET_LANG}.phar" "/var/www/html/include/i18n/${OSTICKET_LANG}.phar"; \
         chown www-data:www-data "/var/www/html/include/i18n/${OSTICKET_LANG}.phar"; \
+        if [ -f "/opt/osticket-i18n/${OSTICKET_LANG}/queue.yaml" ]; then \
+            mkdir -p "/var/www/html/include/i18n/${OSTICKET_LANG}"; \
+            cp -f "/opt/osticket-i18n/${OSTICKET_LANG}/queue.yaml" "/var/www/html/include/i18n/${OSTICKET_LANG}/queue.yaml"; \
+            chown -R www-data:www-data "/var/www/html/include/i18n/${OSTICKET_LANG}"; \
+        fi; \
     fi
 
 # Community plugins, hydrated at build time. The entrypoint copies the

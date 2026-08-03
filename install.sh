@@ -63,13 +63,19 @@ done
 command -v docker >/dev/null 2>&1 || die "docker not found in PATH"
 docker compose version >/dev/null 2>&1 || die "docker compose plugin not available"
 
-# When installed via a pipe (`curl ... | sh`), stdin is not a terminal, so
-# every `read` prompt below would get EOF and silently fall back to defaults
-# (or worse, appear to hang). Detect that and switch to non-interactive mode.
-if [ "$ASK" = 1 ] && ! [ -t 0 ]; then
-    ASK=0
-    SETUP_MODE="${SETUP_MODE:-auto}"
-    info "stdin is not a terminal; running non-interactively (pass -y explicitly to suppress)"
+# When installed via a pipe (`curl ... | sh`), stdin is not a terminal and is
+# at EOF, so `read` would silently fall back to defaults. Redirect fd 0 from
+# /dev/tty so interactive prompts still read the user's real terminal — same
+# pattern git/ssh use. If no tty exists (CI, headless), fall back to
+# non-interactive mode (same as -y).
+if ! [ -t 0 ]; then
+    if exec 0</dev/tty 2>/dev/null; then
+        info "Reading input from the terminal (not the pipe)"
+    else
+        ASK=0
+        SETUP_MODE="${SETUP_MODE:-auto}"
+        info "stdin is not a terminal and no tty available; running non-interactively (pass -y explicitly to suppress)"
+    fi
 fi
 
 gen_password() {

@@ -76,6 +76,7 @@ function create_instance($plugin, $vars, $label) {
     foreach ($plugin->getInstances() as $i) {
         if (strcasecmp($i->getName(), $vars['name']) === 0) {
             logln("auth instance '$label' already present");
+            update_instance_config($i, $vars, $label);
             return $i;
         }
     }
@@ -92,6 +93,31 @@ function create_instance($plugin, $vars, $label) {
     }
 
     return isset($i) ? $i : null;
+}
+
+// Declaratively reconcile an existing instance's config with the env-derived
+// $vars (same pattern as system_language and TRUSTED_PROXIES below). Without
+// this, an instance created once keeps whatever redirectUri/endpoints it was
+// given, so changing OSTICKET_HELPDESK_URL later never reaches the OAuth flow.
+// Only plain text fields are reconciled: SectionBreakField is a UI-only
+// separator with no stored value, and PasswordField (clientSecret) holds
+// ciphertext that can't be compared or re-set safely from here -- manage
+// secrets in the admin panel.
+function update_instance_config($instance, $vars, $label) {
+    $config = $instance->getConfig();
+    if (!$config || !method_exists($config, 'getFields'))
+        return;
+    foreach ($config->getFields() as $key => $field) {
+        if (!array_key_exists($key, $vars))
+            continue;
+        if ($field instanceof SectionBreakField || $field instanceof PasswordField)
+            continue;
+        $current = $config->get($key);
+        if ($current !== $vars[$key]) {
+            $config->set($key, $vars[$key]);
+            logln("auth instance '$label' $key updated: '$current' -> '".$vars[$key]."'");
+        }
+    }
 }
 
 function oauth_redirect_uri() {

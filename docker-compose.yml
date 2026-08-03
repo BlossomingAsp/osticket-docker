@@ -22,7 +22,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
+      test: ["CMD", "mariadb", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}", "-e", "SELECT 1"]
       interval: 10s
       timeout: 5s
       retries: 10

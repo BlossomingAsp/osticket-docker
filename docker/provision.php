@@ -69,6 +69,18 @@ function ensure_plugin($name) {
         err("unable to activate plugin '$name': ".implode(', ', $errors));
         return null;
     }
+    // Return the plugin impl (subclass) when available, matching
+    // PluginManager::lookup() semantics. install() returns a base Plugin
+    // (Plugin::create) whose config_class is null, so getConfig()/addInstance()
+    // would crash with "Call to a member function getForm() on null" on the
+    // very first start, right after install -- while a later start (when the
+    // plugin row is read via allInstalled()) returns the subclass and works.
+    // NB: the impl's lookup() can return a stale ORM row (isactive still 0)
+    // immediately after install, so re-assert isactive on it explicitly.
+    if (($impl = $p->getImpl())) {
+        $impl->set('isactive', 1);
+        return $impl;
+    }
     return $p;
 }
 

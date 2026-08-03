@@ -220,9 +220,15 @@ start):
 
 > Provisioning gotchas baked into the code: it sets
 > `$_SERVER['REQUEST_METHOD']='POST'` (config forms merge empty saved config
-> otherwise) and it reuses the `ensure_plugin()` return values rather than
+> otherwise); it reuses the `ensure_plugin()` return values rather than
 > re-querying `PluginManager::allInstalled()` (osTicket's ORM caches stale
-> rows right after activate).
+> rows right after activate); and `ensure_plugin()` returns the plugin **impl
+> subclass** (`$p->getImpl()`), not the base `Plugin` row that
+> `PluginManager::install()` creates — that base row has a null `config_class`,
+> so `addInstance()` would crash with "Call to a member function getForm() on
+> null" on the very first start. Because the impl's `lookup()` can itself
+> return a stale ORM row (`isactive=0`) right after install, provisioning
+> re-asserts `$impl->set('isactive', 1)` before returning it.
 
 ---
 
@@ -598,7 +604,11 @@ outgoing email notifications require an SMTP setup in osTicket.
 ### First boot (auto-setup)
 
 1. `install.sh` writes `.env`, `docker compose build`, `docker compose up -d`.
-2. `db` initializes (MariaDB entrypoint creates database/user from `MARIADB_*`).
+2. `db` initializes (MariaDB entrypoint creates database/user from `MARIADB_*`);
+   its healthcheck is `mariadb -e "SELECT 1"` — a real query, because
+   `mariadb-admin ping` reports alive before MariaDB actually accepts
+   connections, which let `osticket` start (and the wizard DB step fail) too
+   early. `osticket`'s `depends_on` waits for `service_healthy`.
 3. `osticket` entrypoint: config doesn't exist → copy sample config → not
    installed + `OSTICKET_AUTOINSTALL=1` → run wizard POSTs → `ost-config.php`
    now has `OSTINSTALLED` → remove `/setup` → provision → Apache starts.

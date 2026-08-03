@@ -30,6 +30,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 ### Changed
 
 - The `discord-bot` now runs on a static IP (`172.30.0.10`) on a dedicated compose subnet, because osTicket API keys are bound to an exact client IP (a CIDR/wildcard will not authenticate). The API key's IP field must be set to `172.30.0.10`.
+- **Discord OAuth matches staff by email**: the Discord auth-oauth2 instance now maps `attr_username` to Discord's `email` field (was the Discord `username` handle), so `Staff::lookup()` matches against `ost_staff.email`. Existing instances are reconciled on `docker compose up -d` (declarative OAuth config). Discord only supplies the email for accounts with a verified email, so staff without one can't sign in via Discord.
 
 ### Fixed
 

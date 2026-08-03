@@ -217,7 +217,7 @@ if ($oauth && $oauth->isActive()) {
             'urlAccessToken'  => 'https://discord.com/api/oauth2/token',
             'urlResourceOwnerDetails' => 'https://discord.com/api/users/@me',
             'scopes'          => 'identify email',
-            'attr_username'   => 'username',
+            'attr_username'   => 'email',
             'attr_email'      => 'email',
         );
     }

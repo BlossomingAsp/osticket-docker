@@ -193,7 +193,11 @@ start):
    - **Google** (`OSTICKET_GOOGLE_CLIENT_ID`) — uses the plugin's built-in
      Google template (correct endpoints/scopes/mappings baked in).
    - **Discord** (`OSTICKET_DISCORD_CLIENT_ID`) — generic OAuth2 with
-     `identify email` scopes.
+     `identify email` scopes. Staff are matched by **email** (`attr_username`
+     = `email`, so the mapped identifier is Discord's verified email and
+     `Staff::lookup()` routes it to `WHERE email = ...`). Discord only returns
+     an email for accounts that have one verified; users without a verified
+     Discord email can't sign in.
    - Redirect URI for all is `<helpdesk URL>/api/auth/oauth2`
      (`OSTICKET_HELPDESK_URL`, else the configured base URL).
    - **Declarative reconcile**: an existing instance is not left untouched —

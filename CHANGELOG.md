@@ -12,7 +12,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ### Fixed
 
-- **Piped installs no longer silently skip prompts**: when `install.sh` runs via `curl ... | sh`, stdin is not a terminal and at EOF, so every `read` prompt got EOF and silently fell back to defaults. `install.sh` now redirects fd 0 from `/dev/tty` so interactive prompts read the user's real terminal (the git/ssh pattern) — a piped install still prompts unless `-y` is given, and only falls back to non-interactive mode when no tty exists (CI/headless).
+- **Interactive one-liner via process substitution**: the one-liner is now `bash <(curl -sSL .../get-osticket.sh)` — process substitution keeps stdin connected to the terminal, so `install.sh` genuinely prompts for passwords, port, and helpdesk details (piped `curl ... | sh` consumes stdin and can't prompt). Piped installs are deliberately rejected with a pointer to the correct command: `get-osticket.sh` refuses up front, and `install.sh` dies unless `-y` (non-interactive) is given. The previous `/dev/tty` redirect approach was dropped as unreliable (it failed to display prompts over SSH).
 - **`get-osticket.sh` keeps its files**: the bootstrap used to extract into a `mktemp -d` temp directory that was deleted on exit, leaving no local copy of the stack. It now extracts into `./osticket-docker/` (override with `OSTICKET_DIR`) and keeps the files, so you can manage/update the stack afterwards; only a read-only current directory falls back to a cleaned-up temp dir.
 
 ## [v1.0.4] - 2026-08-03

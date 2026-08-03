@@ -6,22 +6,32 @@ set -eu
 # Downloads the repo source tarball for a release (default: the latest
 # GitHub release) and runs its install.sh, forwarding all arguments.
 #
-# Usage (from anywhere):
-#   curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
+# Usage (from anywhere) — interactive:
+#   bash <(curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh)
+# Process substitution keeps stdin connected to your terminal, so install.sh
+# can prompt for passwords, port, helpdesk details, etc.
+#
+# Non-interactive (auto-setup with defaults, no prompts):
+#   bash <(curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh) -y --auto
+#   bash <(curl -sSL .../get-osticket.sh) -y --manual
+#
+# Piping this script (curl ... | sh) is NOT supported — stdin is consumed by
+# the pipe, so interactive prompts cannot work. install.sh refuses to run
+# without a terminal unless -y is given.
 #
 # If the repo is private, the one-liner needs a token (repo scope):
-#   curl -sSL -H "Authorization: Bearer $GH_TOKEN" https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
+#   GH_TOKEN=xxx bash <(curl -sSL -H "Authorization: Bearer $GH_TOKEN" https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh)
 #   (GH_TOKEN must be exported so this script's downloads are authorized too)
 #
 # To pin a specific release instead of "latest", set OSTICKET_RELEASE:
-#   OSTICKET_RELEASE=v1.0.3 sh get-osticket.sh -y --auto
+#   OSTICKET_RELEASE=v1.0.6 bash <(curl -sSL .../get-osticket.sh)
 #
 # To pick a channel instead of "latest" (stable default), set OSTICKET_CHANNEL:
-#   OSTICKET_CHANNEL=experimental sh get-osticket.sh -y --auto
+#   OSTICKET_CHANNEL=experimental bash <(curl -sSL .../get-osticket.sh)
 #   stable        -> latest stable release (default)
 #   experimental  -> latest experimental prerelease (falls back to stable)
 # The experimental channel tracks the `experimental` branch's prerelease tags
-# (e.g. v1.1.0-exp.1). Expect breakage; not for production.
+# (e.g. v1.1.0-exp.3). Expect breakage; not for production.
 #
 # Files are downloaded and extracted into ./osticket-docker/ (in the current
 # directory) and kept there, so you keep a local copy of the stack to update
@@ -30,11 +40,23 @@ set -eu
 # exit instead.
 
 REPO="BlossomingAsp/osticket-docker"
-DEFAULT_TAG="v1.0.4"
+DEFAULT_TAG="v1.0.6"
 CHANNEL="${OSTICKET_CHANNEL:-stable}"
 
 info()  { printf '==> %s\n' "$*"; }
 die()   { printf '[x] %s\n' "$*" >&2; exit 1; }
+
+# Piped installs consume stdin, so the installer could never prompt. Refuse
+# up front unless the user explicitly opted into non-interactive (-y).
+noninteractive=0
+for _arg in "$@"; do
+    [ "$_arg" = "-y" ] || [ "$_arg" = "--yes" ] && noninteractive=1
+done
+if ! [ -t 0 ] && [ "$noninteractive" = 0 ]; then
+    die "piped installs are not supported. Run the interactive one-liner instead:
+       bash <(curl -sSL https://github.com/$REPO/releases/latest/download/get-osticket.sh)
+    or pass -y for non-interactive."
+fi
 
 # For private repos the API/tarball/asset requests need the token too.
 if [ -n "${GH_TOKEN:-}" ]; then

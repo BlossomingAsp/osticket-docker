@@ -7,23 +7,26 @@ Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache i
 
 ## Quick start
 
-Install straight from a [release](https://github.com/BlossomingAsp/osticket-docker/releases) — this downloads the repo and starts the installer (non-interactive auto-setup):
+Install straight from a [release](https://github.com/BlossomingAsp/osticket-docker/releases) — this downloads the repo and starts the installer interactively (it prompts for DB passwords, port, helpdesk details, etc.):
 
 ```sh
-curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
-# manual wizard:  ... | sh -s -- -y --manual
-# pin a release:  OSTICKET_RELEASE=v1.0.4 ... | sh -s -- -y --auto
-# experimental:   OSTICKET_CHANNEL=experimental ... | sh -s -- -y --auto
+bash <(curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh)
+# non-interactive auto-setup (no prompts):  ... -y --auto
+# non-interactive manual wizard:            ... -y --manual
+# pin a release:  OSTICKET_RELEASE=v1.0.6 bash <(curl -sSL .../get-osticket.sh)
+# experimental:   OSTICKET_CHANNEL=experimental bash <(curl -sSL .../get-osticket.sh)
 ```
+
+`bash <(curl ...)` uses **process substitution**, so stdin stays connected to your terminal and `install.sh` can prompt you — a plain `curl ... | sh` pipe would consume stdin and can't prompt. You can also `git clone` this repo and run `./install.sh` directly for the same interactive experience.
 
 The bootstrap downloads the release's files into a local `./osticket-docker/` directory (override with `OSTICKET_DIR`) and keeps them there, so you can manage the stack afterwards — edit `.env`, run `./update.sh`, `docker compose up -d`, etc. If the current directory isn't writable it falls back to a temporary directory instead.
 
-> **Piped installs are interactive.** When the script runs via `curl ... | sh`, it reads your answers from the terminal (not the pipe), so you'll be prompted for DB passwords, port, helpdesk name, etc. exactly like running `./install.sh` directly. Pass `-y` to skip prompts and auto-generate secrets. To customize non-interactively, export the `OSTICKET_*` variables first (see [Configuration](#configuration)), e.g.:
->
-> ```sh
-> OSTICKET_HELPDESK_NAME="Acme Support" OSTICKET_ADMIN_USERNAME=aspen \
->   curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh | sh -s -- -y --auto
-> ```
+To customize non-interactively, pass `-y` (skip prompts, auto-generate secrets) and export the `OSTICKET_*` variables (see [Configuration](#configuration)), e.g.:
+
+```sh
+OSTICKET_HELPDESK_NAME="Acme Support" OSTICKET_ADMIN_USERNAME=aspen \
+  bash <(curl -sSL https://github.com/BlossomingAsp/osticket-docker/releases/latest/download/get-osticket.sh) -y --auto
+```
 
 **Release channels.** `get-osticket.sh` installs from a channel, chosen with `OSTICKET_CHANNEL` (default `stable`): `stable` = latest stable release, `experimental` = latest experimental **prerelease** from the `experimental` branch (falls back to stable until the first prerelease exists). Experimental builds track new features before they're stabilized — expect breakage, don't use them in production. A specific tag always wins via `OSTICKET_RELEASE`, regardless of channel.
 

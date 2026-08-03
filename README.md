@@ -216,7 +216,7 @@ Provider details baked in:
 
 - **Pocket ID** — generic OIDC; endpoints `…/authorize`, `…/oauth/token`, `…/userinfo`; scopes `openid profile email`; username mapped from `preferred_username` (override with `OSTICKET_OIDC_ATTR_USERNAME`).
 - **Google** — uses the plugin's built-in Google template (correct endpoints, scopes, `given_name`/`family_name` mapping); only the client ID/secret are required.
-- **Discord** — generic OAuth2 with `identify email` scopes; username/email mapped from Discord's userinfo (`username`, `email`). Discord has no given/family-name claims.
+- **Discord** — generic OAuth2 with `identify email` scopes; staff are matched by **email** (Discord's `email` claim is mapped as the user identifier, so sign-in matches `ost_staff.email`). Discord has no given/family-name claims, and only returns an email for accounts with a **verified** email — staff without one can't sign in via Discord.
 
 ### Getting provider credentials
 

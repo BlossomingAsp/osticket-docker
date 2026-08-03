@@ -2,6 +2,7 @@ services:
   db:
     image: mariadb:11.4
     restart: unless-stopped
+    container_name: osticket-db
     # Optional resource limits (recommended for production). Only enable on a
     # host with enough RAM/CPU -- limits above what the host has will stop the
     # container from starting. See README -> "Resource limits".
@@ -36,6 +37,7 @@ services:
         OSTICKET_LANG: ${OSTICKET_LANG:-en_US}
     image: osticket-docker-osticket
     restart: unless-stopped
+    container_name: osticket
     # Optional resource limits (recommended for production).
     # deploy:
     #   resources:
@@ -92,6 +94,7 @@ services:
       context: ./docker/discord-bot
       dockerfile: Dockerfile
     restart: on-failure
+    container_name: osticket-discord
     # Optional resource limits (recommended for production).
     # deploy:
     #   resources:

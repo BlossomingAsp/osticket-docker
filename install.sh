@@ -234,16 +234,6 @@ ADMIN_EMAIL="${OSTICKET_ADMIN_EMAIL:-}"
 ADMIN_USERNAME="${OSTICKET_ADMIN_USERNAME:-}"
 ADMIN_PASSWORD="${OSTICKET_ADMIN_PASSWORD:-}"
 PLUGINS="${OSTICKET_PLUGINS:-auth-oauth2,auth-2fa}"
-OIDC_NAME="${OSTICKET_OIDC_NAME:-Pocket ID}"
-OIDC_URL="${OSTICKET_OIDC_URL:-}"
-OIDC_CLIENT_ID="${OSTICKET_OIDC_CLIENT_ID:-}"
-OIDC_CLIENT_SECRET="${OSTICKET_OIDC_CLIENT_SECRET:-}"
-OIDC_AUTH_TARGET="${OSTICKET_OIDC_AUTH_TARGET:-agents}"
-OIDC_ATTR_USERNAME="${OSTICKET_OIDC_ATTR_USERNAME:-preferred_username}"
-GOOGLE_NAME="${OSTICKET_GOOGLE_NAME:-Google}"
-GOOGLE_CLIENT_ID="${OSTICKET_GOOGLE_CLIENT_ID:-}"
-GOOGLE_CLIENT_SECRET="${OSTICKET_GOOGLE_CLIENT_SECRET:-}"
-GOOGLE_AUTH_TARGET="${OSTICKET_GOOGLE_AUTH_TARGET:-agents}"
 DISCORD_NAME="${OSTICKET_DISCORD_NAME:-Discord}"
 DISCORD_CLIENT_ID="${OSTICKET_DISCORD_CLIENT_ID:-}"
 DISCORD_CLIENT_SECRET="${OSTICKET_DISCORD_CLIENT_SECRET:-}"
@@ -273,28 +263,6 @@ if [ "$SKIP_PROMPTS" = 0 ] && [ "$SETUP_MODE" = auto ]; then
     ADMIN_USERNAME="$(ask 'Admin username' "$ADMIN_USERNAME")"
     ADMIN_PASSWORD="$(secret 'Admin password')"
     PLUGINS="$(ask 'Plugins (comma-separated)' "$PLUGINS")"
-
-    if [ -n "$OIDC_CLIENT_ID" ] || [ "$ASK" = 1 ]; then
-        OIDC_CLIENT_ID="$(ask 'Pocket ID client ID (blank to skip)' "$OIDC_CLIENT_ID")"
-    fi
-    if [ -n "$OIDC_CLIENT_ID" ]; then
-        OIDC_NAME="$(ask 'Pocket ID display name' "$OIDC_NAME")"
-        OIDC_URL="$(ask 'Pocket ID URL (blank to skip)' "$OIDC_URL")"
-        [ -n "$OIDC_URL" ] || OIDC_CLIENT_ID=""
-        if [ -n "$OIDC_URL" ]; then
-            OIDC_CLIENT_SECRET="$(optional_secret 'Pocket ID client secret')"
-            OIDC_AUTH_TARGET="$(ask 'Pocket ID auth target (none/agents/users/all)' "$OIDC_AUTH_TARGET")"
-        fi
-    fi
-
-    if [ -n "$GOOGLE_CLIENT_ID" ] || [ "$ASK" = 1 ]; then
-        GOOGLE_CLIENT_ID="$(ask 'Google client ID (blank to skip)' "$GOOGLE_CLIENT_ID")"
-    fi
-    if [ -n "$GOOGLE_CLIENT_ID" ]; then
-        GOOGLE_NAME="$(ask 'Google display name' "$GOOGLE_NAME")"
-        GOOGLE_CLIENT_SECRET="$(optional_secret 'Google client secret')"
-        GOOGLE_AUTH_TARGET="$(ask 'Google auth target (none/agents/users/all)' "$GOOGLE_AUTH_TARGET")"
-    fi
 
     if [ -n "$DISCORD_CLIENT_ID" ] || [ "$ASK" = 1 ]; then
         DISCORD_CLIENT_ID="$(ask 'Discord client ID (blank to skip)' "$DISCORD_CLIENT_ID")"
@@ -350,18 +318,6 @@ if [ "$SKIP_PROMPTS" = 0 ]; then
             printf 'OSTICKET_ADMIN_PASSWORD=%s\n' "$ADMIN_PASSWORD"
             printf '%s\n' '# --- Plugins ---'
             printf 'OSTICKET_PLUGINS=%s\n' "$PLUGINS"
-            printf '%s\n' '# --- Pocket ID (OIDC) ---'
-            printf 'OSTICKET_OIDC_NAME=%s\n' "$OIDC_NAME"
-            printf 'OSTICKET_OIDC_URL=%s\n' "$OIDC_URL"
-            printf 'OSTICKET_OIDC_CLIENT_ID=%s\n' "$OIDC_CLIENT_ID"
-            printf 'OSTICKET_OIDC_CLIENT_SECRET=%s\n' "$OIDC_CLIENT_SECRET"
-            printf 'OSTICKET_OIDC_AUTH_TARGET=%s\n' "$OIDC_AUTH_TARGET"
-            printf 'OSTICKET_OIDC_ATTR_USERNAME=%s\n' "$OIDC_ATTR_USERNAME"
-            printf '%s\n' '# --- Google OAuth ---'
-            printf 'OSTICKET_GOOGLE_NAME=%s\n' "$GOOGLE_NAME"
-            printf 'OSTICKET_GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
-            printf 'OSTICKET_GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
-            printf 'OSTICKET_GOOGLE_AUTH_TARGET=%s\n' "$GOOGLE_AUTH_TARGET"
             printf '%s\n' '# --- Discord OAuth ---'
             printf 'OSTICKET_DISCORD_NAME=%s\n' "$DISCORD_NAME"
             printf 'OSTICKET_DISCORD_CLIENT_ID=%s\n' "$DISCORD_CLIENT_ID"
@@ -369,7 +325,7 @@ if [ "$SKIP_PROMPTS" = 0 ]; then
             printf 'OSTICKET_DISCORD_AUTH_TARGET=%s\n' "$DISCORD_AUTH_TARGET"
         else
             printf '%s\n' '# Add OSTICKET_* vars below (see .env.example) to enable auto-install,'
-            printf '%s\n' '# plugin provisioning and OAuth/OIDC after a manual install.'
+            printf '%s\n' '# plugin provisioning and OAuth after a manual install.'
         fi
     } > .env
     info ".env written (mode 600, gitignored)"

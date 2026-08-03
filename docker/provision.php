@@ -7,8 +7,8 @@
 
     It installs and activates the community plugins requested in
     OSTICKET_PLUGINS and, for the auth-oauth2 plugin, creates and
-    enables one authentication instance per configured IdP (Pocket ID,
-    Google, Discord). All values come from environment variables; see
+    enables one authentication instance per configured IdP (Discord).
+    All values come from environment variables; see
     .env.example for the full list.
 **********************************************************************/
 
@@ -132,8 +132,6 @@ function oauth_redirect_uri() {
 // --- install & activate requested plugins ------------------------------
 $plugins = array_filter(array_map('trim', explode(',', get_env('OSTICKET_PLUGINS'))));
 $want_oauth2 = in_array('auth-oauth2', $plugins)
-    || get_env('OSTICKET_OIDC_CLIENT_ID')
-    || get_env('OSTICKET_GOOGLE_CLIENT_ID')
     || get_env('OSTICKET_DISCORD_CLIENT_ID');
 
 if ($want_oauth2 && !in_array('auth-oauth2', $plugins))
@@ -155,51 +153,7 @@ foreach ($plugins as $name) {
 $oauth = $loaded['auth-oauth2'] ?? null;
 logln("oauth2 plugin present=".($oauth ? 'yes' : 'no')." active=".($oauth && $oauth->isActive() ? 'yes' : 'no'));
 if ($oauth && $oauth->isActive()) {
-    $impl = $oauth->getImpl();
-    $google_defaults = ($impl && method_exists($impl, 'getNewInstanceDefaults'))
-        ? $impl->getNewInstanceDefaults(array('provider' => 'oauth2:google'))
-        : array();
-
     $providers = array();
-
-    // Pocket ID (generic OIDC)
-    if (get_env('OSTICKET_OIDC_URL') && get_env('OSTICKET_OIDC_CLIENT_ID')) {
-        $base = rtrim(get_env('OSTICKET_OIDC_URL'), '/');
-        $name = get_env('OSTICKET_OIDC_NAME') ?: 'Pocket ID';
-        $providers[] = array(
-            'name'            => $name,
-            'auth_name'       => $name,
-            'auth_service'    => get_env('OSTICKET_OIDC_SERVICE') ?: 'Pocket ID',
-            'auth_type'       => 'auth',
-            'auth_target'     => get_env('OSTICKET_OIDC_AUTH_TARGET') ?: 'agents',
-            'clientId'        => get_env('OSTICKET_OIDC_CLIENT_ID'),
-            'clientSecret'    => get_env('OSTICKET_OIDC_CLIENT_SECRET'),
-            'redirectUri'     => oauth_redirect_uri(),
-            'urlAuthorize'    => $base.'/authorize',
-            'urlAccessToken'  => $base.'/oauth/token',
-            'urlResourceOwnerDetails' => $base.'/userinfo',
-            'scopes'          => 'openid profile email',
-            'attr_username'   => get_env('OSTICKET_OIDC_ATTR_USERNAME') ?: 'preferred_username',
-            'attr_email'      => 'email',
-            'attr_givenname'  => 'given_name',
-            'attr_surname'    => 'family_name',
-        );
-    }
-
-    // Google (built-in provider template)
-    if (get_env('OSTICKET_GOOGLE_CLIENT_ID')) {
-        $name = get_env('OSTICKET_GOOGLE_NAME') ?: 'Google';
-        $providers[] = array_merge($google_defaults, array(
-            'name'         => $name,
-            'auth_name'    => $name,
-            'auth_service' => get_env('OSTICKET_GOOGLE_SERVICE') ?: 'Google',
-            'auth_type'    => 'auth',
-            'auth_target'  => get_env('OSTICKET_GOOGLE_AUTH_TARGET') ?: 'agents',
-            'clientId'     => get_env('OSTICKET_GOOGLE_CLIENT_ID'),
-            'clientSecret' => get_env('OSTICKET_GOOGLE_CLIENT_SECRET'),
-            'redirectUri'  => oauth_redirect_uri(),
-        ));
-    }
 
     // Discord (generic OAuth2)
     if (get_env('OSTICKET_DISCORD_CLIENT_ID')) {

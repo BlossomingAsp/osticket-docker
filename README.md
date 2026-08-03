@@ -2,7 +2,7 @@
 *This is a fully AI generated project at the moment, created for my own personal use. I'm sure experienced developers are able to tell from a mile away. [osTicket](https://osticket.com) is downloaded on build, that part is not vibecoded of course. Don't run this in production. Have fun!*
 # osTicket Docker Compose stack
 
-Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose. Supports one-command auto-setup (no browser) or the official manual web wizard, plus optional OAuth/OIDC single sign-on (Pocket ID, Google, Discord) and two-factor authentication.
+Self-hosted [osTicket](https://osticket.com) helpdesk: a custom PHP 8.3 Apache image + MariaDB 11.4, orchestrated with docker-compose. Supports one-command auto-setup (no browser) or the official manual web wizard, plus optional OAuth single sign-on (Discord) and two-factor authentication.
 
 ## Quick start
 
@@ -142,27 +142,7 @@ Used only when `OSTICKET_AUTOINSTALL=1` (auto-setup mode).
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `OSTICKET_PLUGINS` | `auth-oauth2,auth-2fa` | Comma-separated plugins to install/activate/provision. Bundled: `auth-oauth2` (OAuth2/OIDC sign-in), `auth-2fa` (authenticator-app two-factor auth) |
-
-### Pocket ID (OIDC)
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `OSTICKET_OIDC_NAME` | `Pocket ID` | Login-button display name |
-| `OSTICKET_OIDC_URL` | — | Issuer base URL (enable by setting this plus a client ID) |
-| `OSTICKET_OIDC_CLIENT_ID` | — | OIDC client ID |
-| `OSTICKET_OIDC_CLIENT_SECRET` | — | OIDC client secret (stored encrypted in the DB) |
-| `OSTICKET_OIDC_AUTH_TARGET` | `agents` | Who can sign in: `none`/`agents`/`users`/`all` |
-| `OSTICKET_OIDC_ATTR_USERNAME` | `preferred_username` | Userinfo claim used as the osTicket username |
-
-### Google OAuth
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `OSTICKET_GOOGLE_NAME` | `Google` | Login-button display name |
-| `OSTICKET_GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
-| `OSTICKET_GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
-| `OSTICKET_GOOGLE_AUTH_TARGET` | `agents` | Who can sign in: `none`/`agents`/`users`/`all` |
+| `OSTICKET_PLUGINS` | `auth-oauth2,auth-2fa` | Comma-separated plugins to install/activate/provision. Bundled: `auth-oauth2` (OAuth2 sign-in), `auth-2fa` (authenticator-app two-factor auth) |
 
 ### Discord OAuth
 
@@ -175,7 +155,7 @@ Used only when `OSTICKET_AUTOINSTALL=1` (auto-setup mode).
 
 ## Auto-setup
 
-When `OSTICKET_AUTOINSTALL=1`, the container installs osTicket automatically on first boot — no browser wizard needed. It POSTs the official setup wizard (`prereq` → `config` → `install`) using the `OSTICKET_*` and `MARIADB_*` values above, then provisions the plugins and OAuth/OIDC sign-in configured in `.env`.
+When `OSTICKET_AUTOINSTALL=1`, the container installs osTicket automatically on first boot — no browser wizard needed. It POSTs the official setup wizard (`prereq` → `config` → `install`) using the `OSTICKET_*` and `MARIADB_*` values above, then provisions the plugins and OAuth sign-in configured in `.env`.
 
 Requirements:
 
@@ -198,32 +178,26 @@ Packs are fetched as `<short-code>.phar` (e.g. `hu.phar`) from the `lang/<minor-
 
 > **Known pack bug (hu_HU):** the official Hungarian pack ships a defective `queue.yaml` where the root ticket queues reference themselves/non-zero parents, which makes the staff panel crash with a 500 (infinite recursion → PHP memory exhaustion) right after login. This image ships a corrected override and also repairs the queue hierarchy on every start, so a stock install of this stack is unaffected; the only requirement is to install from this repo's image (rebuild with `docker compose up -d --build`), not from a stale `include/` volume.
 
-## Plugins and OAuth/OIDC sign-in
+## Plugins and OAuth sign-in
 
-The image bundles two community plugins (osTicket-plugins, 1.17.x line): **auth-oauth2** (OAuth2/OIDC sign-in) and **auth-2fa** (authenticator-app two-factor auth). `OSTICKET_PLUGINS` (default `auth-oauth2,auth-2fa`) selects which are installed, activated, and provisioned on every container start.
+The image bundles two community plugins (osTicket-plugins, 1.17.x line): **auth-oauth2** (OAuth2 sign-in) and **auth-2fa** (authenticator-app two-factor auth). `OSTICKET_PLUGINS` (default `auth-oauth2,auth-2fa`) selects which are installed, activated, and provisioned on every container start.
 
 Each IdP is a separate **instance** of the auth-oauth2 plugin, created automatically from `.env` when its client ID is set:
 
 | Provider   | `.env` vars                              | Login button                  |
 |------------|------------------------------------------|-------------------------------|
-| Pocket ID  | `OSTICKET_OIDC_URL/CLIENT_ID/CLIENT_SECRET` (+ `AUTH_TARGET`) | "Sign in with Pocket ID" |
-| Google     | `OSTICKET_GOOGLE_CLIENT_ID/CLIENT_SECRET` (+ `AUTH_TARGET`)   | "Sign in with Google" |
 | Discord    | `OSTICKET_DISCORD_CLIENT_ID/CLIENT_SECRET` (+ `AUTH_TARGET`)  | "Sign in with Discord" |
 
-`AUTH_TARGET` controls who can sign in: `agents` (staff only), `users` (end users only), `all`, or `none`. The OAuth redirect URI for every provider is your helpdesk URL + `/api/auth/oauth2` — register that callback in each IdP's app (Google Cloud Console OAuth client, Discord Developer Portal OAuth2, Pocket ID OIDC client).
+`AUTH_TARGET` controls who can sign in: `agents` (staff only), `users` (end users only), `all`, or `none`. The OAuth redirect URI is your helpdesk URL + `/api/auth/oauth2` — register that callback in the Discord app.
 
 Provider details baked in:
 
-- **Pocket ID** — generic OIDC; endpoints `…/authorize`, `…/oauth/token`, `…/userinfo`; scopes `openid profile email`; username mapped from `preferred_username` (override with `OSTICKET_OIDC_ATTR_USERNAME`).
-- **Google** — uses the plugin's built-in Google template (correct endpoints, scopes, `given_name`/`family_name` mapping); only the client ID/secret are required.
 - **Discord** — generic OAuth2 with `identify email` scopes; staff are matched by **email** (Discord's `email` claim is mapped as the user identifier, so sign-in matches `ost_staff.email`). Discord has no given/family-name claims, and only returns an email for accounts with a **verified** email — staff without one can't sign in via Discord.
 
 ### Getting provider credentials
 
-All three providers share the same rule: register the app with the exact redirect URI `<your helpdesk URL>/api/auth/oauth2`, and put the client ID + secret (plus the provider base URL for Pocket ID) into `.env`. Google and Discord reject `http://` redirect URIs, so use HTTPS (a real domain, or a tunnel like Cloudflare Tunnel/ngrok pointing at your port when testing on localhost).
+The rule is the same for Discord: register the app with the exact redirect URI `<your helpdesk URL>/api/auth/oauth2`, and put the client ID + secret into `.env`. Discord rejects `http://` redirect URIs, so use HTTPS (a real domain, or a tunnel like Cloudflare Tunnel/ngrok pointing at your port when testing on localhost).
 
-- **Pocket ID** — in the Pocket ID admin, create an **OIDC client** for this helpdesk; it returns a client ID, a client secret, and the Pocket ID base URL (your `OSTICKET_OIDC_URL`). Add the redirect URI to the client, set the userinfo claim used for the username in `OSTICKET_OIDC_ATTR_USERNAME` (default `preferred_username`).
-- **Google** — [Google Cloud Console](https://console.cloud.google.com/) → your project → **APIs & Services → OAuth consent screen** (configure the app, add your email as a test user), then **Credentials → Create Credentials → OAuth client ID → Web application** → add the redirect URI under *Authorized redirect URIs*. Copy the client ID and secret.
 - **Discord** — [Discord Developer Portal](https://discord.com/developers/applications) → **New Application** → **OAuth2 → General**: copy the client ID and client secret, and add the redirect URI under *Redirects*. No scopes or bot setup needed.
 
 OAuth client secrets are stored in `.env` (gitignored) and injected into the oauth2 plugin instance's config (stored encrypted in the `ost_config` table) by `docker/provision.php`.
@@ -320,7 +294,7 @@ See the [LICENSE](LICENSE) file for the full terms.
 
 - `Dockerfile` — PHP 8.3 Apache + osTicket extensions (gd, gettext, imap, intl, mysqli, pdo_mysql, zip, apcu); app source from the GitHub release zip (`upload/` → `/var/www/html`); a builder stage hydrates and bundles the `auth-oauth2` + `auth-2fa` plugins
 - `docker/entrypoint.sh` — pre-creates `ost-config.php`, optionally auto-installs via the wizard (`OSTICKET_AUTOINSTALL=1`), removes `/var/www/html/setup` once installed, injects `TRUSTED_PROXIES`, copies plugins into the include volume, and runs `docker/provision.php`
-- `docker/provision.php` — installs/activates the requested plugins and creates the OAuth2 instances (Pocket ID/Google/Discord) + 2FA instance from `OSTICKET_*` env vars
+- `docker/provision.php` — installs/activates the requested plugins and creates the OAuth2 instances (Discord) + 2FA instance from `OSTICKET_*` env vars
 - `docker-compose.yml` — `db` (mariadb:11.4, utf8mb4) + `osticket` (build: .), healthchecks + `depends_on`, all `OSTICKET_*`/`MARIADB_*` env vars passed to the container
 - `install.sh` — asks auto-setup vs manual wizard, creates `.env` (mode 600), builds the image, starts the stack; checks the configured osTicket version against the latest release and offers to bump it
 - `update.sh` — queries the latest osTicket release, bumps `OSTICKET_VERSION` in `.env` on approval, and rebuilds the stack

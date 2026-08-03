@@ -25,6 +25,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 ### Changed
 
 - **Discord OAuth matches staff by email**: the Discord auth-oauth2 instance now maps `attr_username` to Discord's `email` field (was the Discord `username` handle), so `Staff::lookup()` matches against `ost_staff.email`. Existing instances are reconciled on `docker compose up -d` (declarative OAuth config). Discord only supplies the email for accounts with a verified email, so staff without one can't sign in via Discord.
+- **OAuth is Discord-only**: Google and Pocket ID (OIDC) providers are removed from the stable line — `docker/provision.php`, `install.sh`, `.env.example`, `docker-compose.yml`, and the docs now ship just the Discord auth-oauth2 instance (plus `OSTICKET_DISCORD_*` vars). The OIDC/Google code remains on the `experimental` branch.
 
 ### Fixed
 
@@ -38,7 +39,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - **Language packs**: `OSTICKET_LANG` (e.g. `hu_HU`) is now bundled into the image at build time — the matching pack is downloaded from `downloads.osticket.com` (as `<short-code>.phar`, stored under the full language code) and re-synced into the `include/` volume on every container start. A fresh install now registers the pack and persists `system_language`, and `docker/provision.php` enforces `system_language = OSTICKET_LANG` on every start (previously a non-English install silently stayed `en_US` because the osTicket installer never writes `system_language`). The build fails loudly if the pack cannot be fetched.
 - `install.sh` now reports when the osTicket update check is skipped due to an explicit `-v` version.
-- README section on where to obtain each OAuth provider's credentials (Pocket ID, Google, Discord) and the shared redirect-URI/HTTPS requirements.
+- README section on where to obtain the Discord OAuth provider's credentials and the shared redirect-URI/HTTPS requirements.
 
 ### Fixed
 
@@ -73,12 +74,12 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - Env-driven **auto-install** of osTicket: `docker/entrypoint.sh` POSTs the official setup wizard (`prereq` → `config` → `install`) on first boot when `OSTICKET_AUTOINSTALL=1`, using `OSTICKET_*`/`MARIADB_*` variables. No browser required.
 - Automatic removal of `/var/www/html/setup` on the next container start once installed.
-- **Plugin + OAuth/OIDC provisioning** (`docker/provision.php`): installs/activates the bundled `auth-oauth2` and `auth-2fa` plugins and creates per-provider OAuth instances (Pocket ID, Google, Discord) from `.env`, re-run idempotently on every start.
-- `OSTICKET_PLUGINS`, `OSTICKET_OIDC_*`, `OSTICKET_GOOGLE_*`, `OSTICKET_DISCORD_*` configuration variables.
+- **Plugin + OAuth provisioning** (`docker/provision.php`): installs/activates the bundled `auth-oauth2` and `auth-2fa` plugins and creates per-provider OAuth instances (Discord) from `.env`, re-run idempotently on every start.
+- `OSTICKET_PLUGINS`, `OSTICKET_DISCORD_*` configuration variables.
 - Reverse-proxy support via `OSTICKET_TRUSTED_PROXIES`, injected into `include/ost-config.php`'s `TRUSTED_PROXIES` define on container start.
 - `install.sh` with auto-setup vs manual-wizard modes, non-interactive flags, and `--dry-run`.
 - `get-osticket.sh` release bootstrap installer (downloads a release source tarball and runs its `install.sh`), honoring `GH_TOKEN` for private-repo downloads and `OSTICKET_RELEASE` for pinning.
-- README user guide covering quick start, OAuth/OIDC sign-in, reverse-proxy/HTTPS, gotchas, and layout.
+- README user guide covering quick start, OAuth sign-in, reverse-proxy/HTTPS, gotchas, and layout.
 
 ### Changed
 

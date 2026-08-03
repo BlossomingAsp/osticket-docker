@@ -26,12 +26,15 @@ set -eu
 # To pin a specific release instead of "latest", set OSTICKET_RELEASE:
 #   OSTICKET_RELEASE=v1.0.6 bash <(curl -sSL .../get-osticket.sh)
 #
-# To pick a channel instead of "latest" (stable default), set OSTICKET_CHANNEL:
+# To pick a channel instead of "latest" (default `stable`, baked per release),
+# set OSTICKET_CHANNEL:
 #   OSTICKET_CHANNEL=experimental bash <(curl -sSL .../get-osticket.sh)
-#   stable        -> latest stable release (default)
-#   experimental  -> latest experimental prerelease (falls back to stable)
+#   stable        -> latest stable release (default on stable release pages)
+#   experimental  -> latest experimental prerelease (falls back to stable;
+#                    default on experimental release pages, whose asset is
+#                    baked with DEFAULT_CHANNEL=experimental)
 # The experimental channel tracks the `experimental` branch's prerelease tags
-# (e.g. v1.1.0-exp.3). Expect breakage; not for production.
+# (e.g. v1.1.0-exp.4). Expect breakage; not for production.
 #
 # Files are downloaded and extracted into ./osticket-docker/ (in the current
 # directory) and kept there, so you keep a local copy of the stack to update
@@ -40,8 +43,13 @@ set -eu
 # exit instead.
 
 REPO="BlossomingAsp/osticket-docker"
-DEFAULT_TAG="v1.0.6"
-CHANNEL="${OSTICKET_CHANNEL:-stable}"
+DEFAULT_TAG="v1.0.7"
+# Default channel when OSTICKET_CHANNEL is unset. Stable release assets ship
+# 'stable'; experimental release assets are cut with this flipped to
+# 'experimental' (see AGENTS.md) so the one-liner on their release page
+# installs the experimental prerelease by default.
+DEFAULT_CHANNEL="${DEFAULT_CHANNEL:-stable}"
+CHANNEL="${OSTICKET_CHANNEL:-$DEFAULT_CHANNEL}"
 
 info()  { printf '==> %s\n' "$*"; }
 die()   { printf '[x] %s\n' "$*" >&2; exit 1; }

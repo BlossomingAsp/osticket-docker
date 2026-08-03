@@ -11,6 +11,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 - **Discord bot rate limiting**: a per-user cooldown (`OSTICKET_DISCORD_RATE_LIMIT`, default 300s) on `!ticket` — spam/DoS guard that reacts with ⏳ and ignores the request during the cooldown.
 - **Discord bot graceful shutdown**: the poll loop is cancelled and the DB connection closed on SIGTERM/SIGINT.
 - README section and commented `deploy.resources` blocks in `docker-compose.yml` documenting optional container resource limits (db 2G/2cpu, osticket 1G/2cpu, discord-bot 256M/0.5cpu).
+- **`setup-discord-bot.sh`**: an interactive helper that configures the Discord ticket bot after install — prompts for the token, channel ID, ticket command, osTicket API key, topic, channel field, poll interval, rate limit, status-emoji map, and fallback emoji, then writes only the `OSTICKET_DISCORD_*`/`OSTICKET_TOPIC_ID` keys into `.env` and offers to (re)start the `discord-bot` service. Re-runnable (existing values are used as defaults); `-y` for non-interactive, `-n` to skip the restart prompt.
 
 ### Fixed
 

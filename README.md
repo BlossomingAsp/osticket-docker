@@ -265,6 +265,13 @@ Message: I need help with my account
    OSTICKET_DISCORD_STATUS_EMOJIS={"Megnyit":"🟢","Megoldott":"✅","Lezárt":"✅"}
    ```
    Status emoji keys must match the osTicket status names **in your language** (e.g. Hungarian names above for a hu_HU install).
+
+   Instead of editing `.env` by hand you can run the interactive helper — it prompts for the token, channel, API key, topic, and emoji map, writes the `OSTICKET_DISCORD_*` variables for you (re-runnable; existing values are used as defaults), and offers to (re)start the bot:
+
+   ```sh
+   ./setup-discord-bot.sh             # interactive
+   ./setup-discord-bot.sh -y -n       # non-interactive: keep .env values, don't restart the bot
+   ```
 7. `docker compose up -d` — the `discord-bot` service starts only when token and channel are set (it exits cleanly otherwise).
 
 All `OSTICKET_DISCORD_*` variables are documented in `.env.example`. This is an **experimental** feature on the `experimental` branch; it is not part of a stable release yet.

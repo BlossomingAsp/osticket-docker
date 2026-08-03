@@ -181,6 +181,14 @@ start):
      `identify email` scopes.
    - Redirect URI for all is `<helpdesk URL>/api/auth/oauth2`
      (`OSTICKET_HELPDESK_URL`, else the configured base URL).
+   - **Declarative reconcile**: an existing instance is not left untouched —
+     `create_instance()` calls `update_instance_config()` to re-sync the plain
+     config fields (`redirectUri`, `clientId`, provider endpoints, scopes,
+     attribute mappings) with the env-derived values whenever they differ, so
+     changing `OSTICKET_HELPDESK_URL` (or a client ID) and recreating the
+     container actually reaches the OAuth flow. `SectionBreakField` separators
+     (no stored value) and the `clientSecret` `PasswordField` (ciphertext) are
+     skipped.
    - Client secrets are stored encrypted by the plugin config.
 3. **2FA instance** — if `auth-2fa` is active and has no instances, create
    one ("Two Factor Auth").
@@ -444,6 +452,7 @@ notifications require an SMTP setup in osTicket.
 |---------|--------------------|
 | `/scp/` 500 after login | stale `ost_queue` cycle → `docker compose up -d` (provision repairs it); rebuild if on an old image |
 | `sendmail: not found` | No MTA in the image; configure SMTP in osTicket if you need email |
+| OAuth login → provider rejects `redirect_uri` ("Not a well formed URL", mismatch) | The plugin instance was provisioned with a stale `redirectUri` (e.g. `http://localhost/api/auth/oauth2` captured during auto-install before `OSTICKET_HELPDESK_URL` was set). Set `OSTICKET_HELPDESK_URL` in `.env` to the public URL, register exactly `<URL>/api/auth/oauth2` in the IdP app, then `docker compose up -d` — provisioning now reconciles the existing instance's `redirectUri` on start |
 | osTicket version not updating | volume shadows `include/`; see §9 |
 | Build fails fetching language pack | `OSTICKET_LANG` unsupported, or offline at build time (by design — loud) |
 | `docker compose up` leaves services unhealthy | recreate cleanly: `docker compose down && docker compose up -d` |

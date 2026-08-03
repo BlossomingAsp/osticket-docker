@@ -20,7 +20,7 @@ This file is the agent/dev runbook. The user-facing guide lives in `README.md` �
 - Rebuild after Dockerfile changes: `docker compose up -d --build`
 
 ## Gotchas
-- When `install.sh` runs through a pipe (`curl ... | sh`), stdin is not a terminal: interactive prompts would get EOF and silently fall back to defaults. The script detects this (`! [ -t 0 ]`) and switches to non-interactive mode (`ASK=0`, `SETUP_MODE=auto` unless `--manual` is passed) with a notice — don't regress this, and remember a piped install needs `OSTICKET_*` exports (or explicit flags) to customize anything.
+- When `install.sh` runs through a pipe (`curl ... | sh`), stdin is not a terminal and is at EOF, so `read` would silently fall back to defaults. The script detects this (`! [ -t 0 ]`) and redirects fd 0 from `/dev/tty`, so interactive prompts still read the user's real terminal (the pattern git/ssh use). Only when no tty exists (CI, headless) does it fall back to non-interactive mode (`ASK=0`, `SETUP_MODE=auto` unless `--manual` is passed). Don't regress this: a piped install should still prompt unless `-y` is given, and customize via `OSTICKET_*` exports or explicit flags in non-interactive contexts.
 - Do NOT use the official `osticket/osticket` hub image; it is stale (PHP 7 era) and osTicket v1.18.4 requires PHP 8.2–8.4. Use the repo `Dockerfile`.
 - Image is pinned to `php:8.3-apache-bookworm`. Do NOT unpin: default `php:8.3-apache` tracks Debian trixie, where `libc-client-dev` (needed to build the `imap` extension) no longer exists. `imap` is bundled in PHP 8.3 but moved to PECL in 8.4.
 - DB must be MariaDB, not MySQL 8 — MySQL 8's `caching_sha2_password` auth breaks osTicket's installer.

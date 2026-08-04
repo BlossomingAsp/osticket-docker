@@ -48,16 +48,23 @@ class TicketBot(discord.Client):
     def __init__(self, cfg, db, api):
         intents = discord.Intents.default()
         intents.message_content = True
+        if cfg.staff_match:
+            intents.members = True
         super().__init__(intents=intents)
         self.cfg = cfg
         self.db = db
         self.api = api
         self._poll_task = None
         self._last_ticket_at = {}
+        self._staff_username_to_id = {}  # discord username (lower) -> user id
+        self._staff_map_ready = asyncio.Event()
+        self._member_refresh_task = None
 
     # --- lifecycle -----------------------------------------------------
     async def setup_hook(self):
         self._poll_task = asyncio.create_task(self.poll_loop())
+        if self.cfg.staff_match:
+            self._member_refresh_task = asyncio.create_task(self._member_refresh_loop())
 
     async def close(self):
         log.info("shutting down")
@@ -65,6 +72,12 @@ class TicketBot(discord.Client):
             self._poll_task.cancel()
             try:
                 await self._poll_task
+            except asyncio.CancelledError:
+                pass
+        if self._member_refresh_task:
+            self._member_refresh_task.cancel()
+            try:
+                await self._member_refresh_task
             except asyncio.CancelledError:
                 pass
         if self.db.conn:
@@ -76,6 +89,43 @@ class TicketBot(discord.Client):
 
     async def on_ready(self):
         log.info("Logged in as %s (channel %s)", self.user, self.cfg.channel_id)
+        if self.cfg.staff_match:
+            await self._build_staff_map()
+            self._staff_map_ready.set()
+
+    async def _build_staff_map(self):
+        channel = self.get_channel(self.cfg.channel_id)
+        if channel is None or channel.guild is None:
+            log.warning("could not find guild for channel %s", self.cfg.channel_id)
+            return
+        guild = channel.guild
+        self._staff_username_to_id.clear()
+        for member in guild.members:
+            if not member.bot:
+                self._staff_username_to_id[member.name.lower()] = member.id
+        log.info("staff username map built with %d members", len(self._staff_username_to_id))
+
+    async def _member_refresh_loop(self):
+        await self._staff_map_ready.wait()
+        while True:
+            try:
+                await asyncio.sleep(self.cfg.poll_interval * 5)  # refresh every 5 poll intervals
+                await self._build_staff_map()
+            except asyncio.CancelledError:
+                break
+            except Exception as ex:
+                log.error("staff map refresh failed: %s", ex)
+
+    async def on_member_join(self, member):
+        if self.cfg.staff_match and not member.bot:
+            self._staff_username_to_id[member.name.lower()] = member.id
+
+    async def on_member_update(self, before, after):
+        if self.cfg.staff_match and not after.bot:
+            # Update the map if username changed
+            if before.name != after.name:
+                self._staff_username_to_id.pop(before.name.lower(), None)
+                self._staff_username_to_id[after.name.lower()] = after.id
 
     # --- inbound messages ----------------------------------------------
     async def on_message(self, message):
@@ -114,6 +164,11 @@ class TicketBot(discord.Client):
             self.db.save_mapping, ticket_number, message.id,
             message.channel.id, message.author.id, status,
         )
+        # Set last_thread_entry_id to current max so only new entries are posted
+        latest_id = await asyncio.to_thread(self.db.get_latest_entry_id, ticket_number)
+        mapping_row = await asyncio.to_thread(self.db.get_mapping_by_ticket, ticket_number)
+        if mapping_row:
+            await asyncio.to_thread(self.db.update_last_thread_entry_id, mapping_row["id"], latest_id)
         emoji = self.emoji_for(status) or self.cfg.fallback_emoji
         await self._react(message, emoji)
 
@@ -166,6 +221,11 @@ class TicketBot(discord.Client):
             str(channel.id), "0", status_name,
             str(thread.id) if thread else None,
         )
+        # Set last_thread_entry_id to current max so only new entries are posted
+        latest_id = await asyncio.to_thread(self.db.get_latest_entry_id, ticket["number"])
+        mapping_row = await asyncio.to_thread(self.db.get_mapping_by_ticket, ticket["number"])
+        if mapping_row:
+            await asyncio.to_thread(self.db.update_last_thread_entry_id, mapping_row["id"], latest_id)
         log.info("mirrored ticket %s to Discord message %s", ticket["number"], msg.id)
 
     async def _ensure_thread(self, message, ticket_number, status_name):
@@ -240,6 +300,15 @@ class TicketBot(discord.Client):
         entry_type = entry.get("type", "M")
         body = (entry.get("body") or "").strip()
 
+        # Assignee mention for client replies when staff matching is enabled
+        assignee_mention = ""
+        if entry_type == "M" and self.cfg.staff_match:
+            ticket_staff_username = entry.get("ticket_staff_username")
+            if ticket_staff_username:
+                discord_id = self._staff_username_to_id.get(ticket_staff_username.lower())
+                if discord_id:
+                    assignee_mention = f"<@{discord_id}> "
+
         if entry_type == "R" and staff_email:
             mention = self._staff_mention(staff_email)
             if mention:
@@ -260,7 +329,7 @@ class TicketBot(discord.Client):
         elif staff_email and entry_type == "R":
             prefix = f"{prefix} <{staff_email}>"
 
-        return f"**{prefix}:** {body}"
+        return f"**{assignee_mention}{prefix}:** {body}"
 
     def _staff_mention(self, staff_email):
         discord_id = self.cfg.staff_discord_map.get(staff_email)

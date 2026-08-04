@@ -56,6 +56,8 @@ class Config:
         # Thread sync
         self.thread_enabled = _bool("DISCORD_THREAD_ENABLED", True)
         self.thread_prefix = os.environ.get("DISCORD_THREAD_PREFIX", "ticket-").strip()
+        # Staff matching for assignee notifications on client replies
+        self.staff_match = _bool("DISCORD_STAFF_MATCH", False)
         self.staff_discord_map = {}
         raw_staff = os.environ.get("DISCORD_STAFF_MAP", "").strip()
         if raw_staff:

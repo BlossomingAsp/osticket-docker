@@ -45,13 +45,15 @@ SELECT te.id, te.thread_id, te.type, te.staff_id, te.user_id,
        te.poster, te.body, te.created,
        s.email AS staff_email, s.username AS staff_username,
        s.firstname AS staff_firstname, s.lastname AS staff_lastname,
-       u.name AS user_name, ue.address AS user_email
+       u.name AS user_name, ue.address AS user_email,
+       astaff.username AS ticket_staff_username
 FROM ost_thread_entry te
 JOIN ost_thread th ON th.id = te.thread_id
 JOIN ost_ticket t ON t.ticket_id = th.object_id
 LEFT JOIN ost_staff s ON s.staff_id = te.staff_id
 LEFT JOIN ost_user u ON u.id = te.user_id
 LEFT JOIN ost_user_email ue ON ue.id = t.user_email_id
+LEFT JOIN ost_staff astaff ON astaff.staff_id = t.staff_id
 WHERE th.object_type = 'T'
   AND t.number = %s
   AND te.id > %s
@@ -154,6 +156,14 @@ class Database:
             cur.execute(
                 "SELECT * FROM ost_discord_ticket_map WHERE discord_message_id = %s",
                 (str(message_id),),
+            )
+            return cur.fetchone()
+
+    def get_mapping_by_ticket(self, ticket_number):
+        with self._cursor() as cur:
+            cur.execute(
+                "SELECT id FROM ost_discord_ticket_map WHERE ticket_number = %s",
+                (ticket_number,),
             )
             return cur.fetchone()
 

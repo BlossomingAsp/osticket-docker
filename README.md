@@ -251,6 +251,7 @@ Message: I need help with my account
 1. **New tickets on osTicket** — mirrored to the Discord channel as a message with ticket details and the assignee's email, then a thread is created from it.
 2. **New replies on osTicket** — staff responses and client messages are posted into the Discord thread, with the author's name and email. Staff are mentioned by Discord username if mapped via `OSTICKET_DISCORD_STAFF_MAP`.
 3. **Status changes** — the reaction on the original Discord message is updated to match the current osTicket status.
+4. **Assignee notifications on client replies** — when `OSTICKET_DISCORD_STAFF_MATCH=1` is enabled, the bot matches the assigned osTicket staff member's username to a Discord user by exact username match (osTicket `username` ↔ Discord `user.name`) and mentions them in the thread when a client replies. Requires the **Server Members Intent** (privileged) in the Discord Developer Portal.
 
 Additionally, adding a recognized status emoji reaction to a Discord message (the bot's own reaction) changes the ticket status on osTicket in return — the old status emoji is removed and the new one stays.
 
@@ -272,10 +273,13 @@ OSTICKET_DISCORD_API_KEY=<osTicket api key>
     OSTICKET_DISCORD_THREAD_ENABLED=1
     OSTICKET_DISCORD_THREAD_PREFIX=ticket-
     OSTICKET_DISCORD_STAFF_MAP={"staff@example.com":"123456789012345678"}
+    OSTICKET_DISCORD_STAFF_MATCH=0
     ```
     Status emoji keys must match the osTicket status names **in your language** (e.g. Hungarian names above for a hu_HU install).
 
     `OSTICKET_DISCORD_STAFF_MAP` is a JSON object mapping osTicket staff email addresses to Discord user IDs. When a staff reply is mirrored to Discord, the bot mentions the mapped Discord user. Leave empty to show the staff name and email without a mention.
+
+    `OSTICKET_DISCORD_STAFF_MATCH` (default `0`) enables assignee notifications on client replies. When set to `1`, the bot matches the ticket's assigned osTicket staff member's `username` against Discord usernames (`user.name`) and mentions the matched Discord user in the thread when a client replies. Requires the **Server Members Intent** (privileged gateway intent) enabled in the Discord Developer Portal. The osTicket staff `username` must match the Discord `user.name` exactly (case-insensitive, including any `_1234` suffix). Since accounts are provisioned manually, use the same username on both systems.
 
     `OSTICKET_DISCORD_THREAD_ENABLED` (default `1`) controls whether the bot creates a Discord thread for each ticket. `OSTICKET_DISCORD_THREAD_PREFIX` (default `ticket-`) sets the thread name prefix.
 

@@ -246,7 +246,13 @@ Message: I need help with my account
 
 `name`, `email` and `message` are required (the message may span multiple lines); `phone` and `channel` (preferred communication channel) are optional. Missing required fields → the bot reacts with ❌ and nothing else. A per-user cooldown (default 300s, `OSTICKET_DISCORD_RATE_LIMIT`) prevents ticket-spam; during the cooldown the bot reacts with ⏳ and ignores the request.
 
-**Flow:** a `!ticket` message creates a ticket via osTicket's REST API, the bot stores the Discord message ↔ ticket mapping in MariaDB, and reacts to the message with the initial status emoji. Every `OSTICKET_DISCORD_POLL_INTERVAL` seconds (default 30) the bot polls the `ost_ticket`/`ost_ticket_status` tables and updates the reaction when the ticket status changes (matching `OSTICKET_DISCORD_STATUS_EMOJIS`, case-insensitive).
+**Flow:** a `!ticket` message creates a ticket via osTicket's REST API, the bot stores the Discord message ↔ ticket mapping in MariaDB, and reacts to the message with the initial status emoji. Every `OSTICKET_DISCORD_POLL_INTERVAL` seconds (default 30) the bot polls the database for three kinds of changes:
+
+1. **New tickets on osTicket** — mirrored to the Discord channel as a message with ticket details and the assignee's email, then a thread is created from it.
+2. **New replies on osTicket** — staff responses and client messages are posted into the Discord thread, with the author's name and email. Staff are mentioned by Discord username if mapped via `OSTICKET_DISCORD_STAFF_MAP`.
+3. **Status changes** — the reaction on the original Discord message is updated to match the current osTicket status.
+
+Additionally, adding a recognized status emoji reaction to a Discord message (the bot's own reaction) changes the ticket status on osTicket in return — the old status emoji is removed and the new one stays.
 
 **Setup:**
 
@@ -259,14 +265,21 @@ Message: I need help with my account
    ```sh
    OSTICKET_DISCORD_BOT_TOKEN=<bot token>
    OSTICKET_DISCORD_CHANNEL_ID=<channel id>
-   OSTICKET_DISCORD_API_KEY=<osTicket api key>
-   # optional:
-   OSTICKET_TOPIC_ID=1
-   OSTICKET_DISCORD_STATUS_EMOJIS={"Megnyit":"🟢","Megoldott":"✅","Lezárt":"✅"}
-   ```
-   Status emoji keys must match the osTicket status names **in your language** (e.g. Hungarian names above for a hu_HU install).
+OSTICKET_DISCORD_API_KEY=<osTicket api key>
+    # optional:
+    OSTICKET_TOPIC_ID=1
+    OSTICKET_DISCORD_STATUS_EMOJIS={"Megnyit":"🟢","Megoldott":"✅","Lezárt":"✅"}
+    OSTICKET_DISCORD_THREAD_ENABLED=1
+    OSTICKET_DISCORD_THREAD_PREFIX=ticket-
+    OSTICKET_DISCORD_STAFF_MAP={"staff@example.com":"123456789012345678"}
+    ```
+    Status emoji keys must match the osTicket status names **in your language** (e.g. Hungarian names above for a hu_HU install).
 
-   Instead of editing `.env` by hand you can run the interactive helper — it prompts for the token, channel, API key, topic, and emoji map, writes the `OSTICKET_DISCORD_*` variables for you (re-runnable; existing values are used as defaults), and offers to (re)start the bot:
+    `OSTICKET_DISCORD_STAFF_MAP` is a JSON object mapping osTicket staff email addresses to Discord user IDs. When a staff reply is mirrored to Discord, the bot mentions the mapped Discord user. Leave empty to show the staff name and email without a mention.
+
+    `OSTICKET_DISCORD_THREAD_ENABLED` (default `1`) controls whether the bot creates a Discord thread for each ticket. `OSTICKET_DISCORD_THREAD_PREFIX` (default `ticket-`) sets the thread name prefix.
+
+    Instead of editing `.env` by hand you can run the interactive helper — it prompts for the token, channel, API key, topic, and emoji map, writes the `OSTICKET_DISCORD_*` variables for you (re-runnable; existing values are used as defaults), and offers to (re)start the bot:
 
    ```sh
    ./setup-discord-bot.sh             # interactive

@@ -9,6 +9,15 @@ def _int(name, default):
         return default
 
 
+def _bool(name, default):
+    v = os.environ.get(name, "").strip().lower()
+    if v in ("1", "true", "yes", "on"):
+        return True
+    if v in ("0", "false", "no", "off"):
+        return False
+    return default
+
+
 class Config:
     """Loads all discord-bot settings from environment variables."""
 
@@ -22,15 +31,10 @@ class Config:
         self.osticket_base_url = os.environ.get("OSTICKET_BASE_URL", "http://osticket:80").rstrip("/")
         self.osticket_api_key = os.environ.get("OSTICKET_API_KEY", "").strip()
         self.osticket_topic_id = _int("OSTICKET_TOPIC_ID", 1)
-        # Optional osTicket dynamic-form field name that holds the preferred
-        # communication channel. When empty, the channel is folded into the
-        # ticket message body instead.
         self.channel_field = os.environ.get("CHANNEL_FIELD", "").strip()
 
         # Polling + reactions
         self.poll_interval = _int("POLL_INTERVAL", 30)
-        # Minimum seconds between ticket creations per Discord user
-        # (spam/DoS guard on !ticket).
         self.rate_limit = _int("RATE_LIMIT", 300)
         default_emojis = {
             "open": "\U0001f7e2",       # 🟢
@@ -46,7 +50,19 @@ class Config:
             except json.JSONDecodeError:
                 raise SystemExit(f"STATUS_EMOJIS is not valid JSON: {raw!r}")
         self.status_emojis = default_emojis
+        self.emoji_to_status = {v: k for k, v in default_emojis.items()}
         self.fallback_emoji = os.environ.get("FALLBACK_EMOJI", "\U0001f4e5")  # 📥
+
+        # Thread sync
+        self.thread_enabled = _bool("DISCORD_THREAD_ENABLED", True)
+        self.thread_prefix = os.environ.get("DISCORD_THREAD_PREFIX", "ticket-").strip()
+        self.staff_discord_map = {}
+        raw_staff = os.environ.get("DISCORD_STAFF_MAP", "").strip()
+        if raw_staff:
+            try:
+                self.staff_discord_map = json.loads(raw_staff)
+            except json.JSONDecodeError:
+                raise SystemExit(f"DISCORD_STAFF_MAP is not valid JSON: {raw_staff!r}")
 
         # Database (MariaDB on the compose network)
         self.db_host = os.environ.get("DB_HOST", "db")

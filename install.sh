@@ -132,6 +132,17 @@ ver_newer() {
         && [ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -n 1)" = "$a" ]
 }
 
+# Emits `--profile mail` (with trailing space) when the optional Stalwart mail
+# server is enabled in .env, so the compose build/up commands bring it (and the
+# scheduler cron) up together with the stack. Empty otherwise.
+compose_profiles() {
+    local on
+    on="$(sed -n 's/^OSTICKET_MAIL_ENABLED=//p' .env 2>/dev/null | tail -n 1 | tr -d '\r')"
+    case "${on,,}" in
+        1|yes|true|on) printf '%s ' '--profile mail' ;;
+    esac
+}
+
 # --- existing .env handling -----------------------------------------------
 SKIP_PROMPTS=0
 if [ -f .env ]; then
@@ -371,6 +382,13 @@ if [ "$SKIP_PROMPTS" = 0 ]; then
             printf '%s\n' '# Add OSTICKET_* vars below (see .env.example) to enable auto-install,'
             printf '%s\n' '# plugin provisioning and OAuth/OIDC after a manual install.'
         fi
+        printf '%s\n' ''
+        printf '%s\n' '# --- Optional self-hosted mail server (Stalwart) ---'
+        printf '%s\n' '# Set OSTICKET_MAIL_ENABLED=1 and OSTICKET_MAIL_HOSTNAME (a public-PTR-'
+        printf '%s\n' '# matching mail hostname like mail.example.com) to run mail alongside'
+        printf '%s\n' '# the stack. See .env.example and README for the full DNS/PTR checklist.'
+        printf 'OSTICKET_MAIL_ENABLED=0\n'
+        printf 'OSTICKET_MAIL_HOSTNAME=%s\n' "${OSTICKET_MAIL_HOSTNAME:-}"
     } > .env
     info ".env written (mode 600, gitignored)"
 fi
@@ -386,15 +404,15 @@ if [ "$DRY_RUN" = 1 ]; then
         cat <<EOF
 To start the stack (auto-setup):
 
-  docker compose build
-  docker compose up -d
+  docker compose $(compose_profiles)build
+  docker compose $(compose_profiles)up -d
 EOF
     else
         cat <<EOF
 To start the stack (manual wizard):
 
-  docker compose build
-  docker compose up -d
+  docker compose $(compose_profiles)build
+  docker compose $(compose_profiles)up -d
   open http://localhost:${port}/setup/
 EOF
     fi
@@ -402,10 +420,10 @@ EOF
 fi
 
 info "Building image (osTicket v${version})"
-docker compose build
+docker compose $(compose_profiles)build
 
 info "Starting the stack"
-docker compose up -d
+docker compose $(compose_profiles)up -d
 
 if [ "$SETUP_MODE" = auto ]; then
     cat <<EOF

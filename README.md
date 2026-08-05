@@ -293,6 +293,42 @@ OSTICKET_DISCORD_API_KEY=<osTicket api key>
 
 All `OSTICKET_DISCORD_*` variables are documented in `.env.example`. This is an **experimental** feature on the `experimental` branch; it is not part of a stable release yet.
 
+## Optional self-hosted mail server (Stalwart)
+
+The stack can run a lightweight, all-in-one mail server (**Stalwart**) alongside osTicket so the helpdesk can **send** email notifications and **receive** client replies (which is also how the client portal's ticket-reply flow and the Discord bot's client-reply mirror get exercised). It is one container (SMTP + IMAP/JMAP + built-in anti-spam/DKIM/SPF/DMARC + Let's Encrypt) and is enabled per-domain via `.env`.
+
+**Enable it** (`.env`):
+
+```sh
+OSTICKET_MAIL_ENABLED=1
+OSTICKET_MAIL_HOSTNAME=mail.example.com
+```
+
+Restart the stack (`./install.sh`, `./update.sh`, or `docker compose --profile mail up -d --build`) — when enabled, install/update automatically pass `--profile mail` so the `mail` (Stalwart) and `cron` (osTicket scheduler) services come up with the stack. The profile keeps them out of a default (non-mail) deployment entirely.
+
+**Requirements to actually send/receive on the internet** (these are the same for any self-hosted mail server and are the usual failure points):
+
+1. You control a domain.
+2. **Reverse DNS (PTR)** for the server's IPv4 address **must** resolve to `mail.example.com` exactly — set in your **VPS provider's panel** (not in DNS; Contabo exposes one IPv4 field). Gmail rejects mail from an IP with a missing/mismatched PTR (`550 5.7.25`). No IPv6 PTR is needed: outbound mail is pinned to IPv4 (the compose network is IPv4-only), so consistency with that single IPv4 PTR is guaranteed.
+3. **Port 25 open both ways** — inbound (to receive) and **outbound** (to send). Many VPS/cloud providers silently block outbound 25; test with `nc -vz -w 5 gmail-smtp-in.l.google.com 25` and request unblocking if it times out.
+4. DNS records in your zone: `mail` A → server IP (**DNS-only / grey cloud — never behind a CDN proxy**, which breaks SMTP/IMAP), and `@ MX 10 mail.example.com`. Add **SPF** (`v=spf1 mx -all`), **DMARC**, and the **DKIM** key Stalwart generates from its admin UI.
+5. Firewall allows 25/465/587/993 (and 443 for the admin UI + Let's Encrypt).
+
+**First-run setup** (browser):
+
+1. Open the Stalwart admin UI at `https://mail.example.com/` (or `http://<host>:8081`).
+2. Accept the default Let's Encrypt certificate or configure ACME for your hostname.
+3. Add your **domain** (`example.com`) under Directory → Domains; copy the domain's generated **DKIM** record into DNS, and publish SPF/DMARC.
+4. Add a **mailbox**, e.g. `support@example.com`.
+
+Then wire osTicket (Admin → Settings / Emails — this lives in the DB, no repo change):
+
+- **System email** → `support@example.com`.
+- **Default SMTP** → host `mail`, port `587` (the `mail` container is on the same compose network); username `support@example.com`.
+- **Inbound mailbox** → IMAP host `mail`, port `993` (SSL), same credentials; set as default and enable fetching.
+
+The `cron` service polls `http://osticket/api/cron.php` every 2 minutes so osTicket actually delivers queued mail and fetches IMAP replies. All `OSTICKET_MAIL_*` vars (image pin, admin/TLS/web ports) are documented in `.env.example`.
+
 ## Roadmap
 
 - **Discord integration via bot** — available now on this (`experimental`) branch; will land on `main` once manually verified.

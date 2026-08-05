@@ -134,9 +134,67 @@ services:
       DB_USER: ${MARIADB_USER:-osticket}
       DB_PASSWORD: ${MARIADB_PASSWORD:?set in .env}
 
+  mail:
+    # Optional self-hosted mail server (Stalwart): SMTP + IMAP/JMAP + built-in
+    # anti-spam and DKIM/SPF/DMARC, Let's Encrypt via ACME, all in one container.
+    # Enabled with OSTICKET_MAIL_ENABLED=1 + OSTICKET_MAIL_HOSTNAME in .env; the
+    # profile keeps it out of the default stack (bring it up with
+    # `./install.sh`, `./update.sh`, or `docker compose --profile mail up -d`).
+    #
+    # IPv4-only egress: the default compose network is a single IPv4 /24, so this
+    # container has no IPv6 address and all SMTP delivery is IPv4. That is
+    # deliberate -- it avoids ever needing an IPv6 PTR (providers like Contabo
+    # only let you set a single IPv4 one). A matching IPv4 PTR (mail.<domain>)
+    # and open outbound/inbound port 25 are still required for delivery.
+    image: ${OSTICKET_MAIL_IMAGE:-stalwartlabs/stalwart:v0.16}
+    restart: unless-stopped
+    container_name: osticket-mail
+    profiles: ["mail"]
+    networks:
+      - default
+    ports:
+      - "${OSTICKET_MAIL_SMTP_PORT:-25}:25"
+      - "${OSTICKET_MAIL_SUBMISSION_PORT:-587}:587"
+      - "${OSTICKET_MAIL_SMTPS_PORT:-465}:465"
+      - "${OSTICKET_MAIL_IMAPS_PORT:-993}:993"
+      - "${OSTICKET_MAIL_TLS_PORT:-443}:443"      # management UI (HTTPS) + ACME tls-alpn-01
+      - "${OSTICKET_MAIL_WEB_PORT:-8081}:8080"    # management UI (HTTP), avoids osticket's 8080
+      # Optional extra ports (uncomment if needed):
+      # - "${OSTICKET_MAIL_IMAP_PORT:-143}:143"   # IMAP STARTTLS; IMAPS 993 usually suffices
+      # - "${OSTICKET_MAIL_POP_PORT:-110}:110"
+      # - "${OSTICKET_MAIL_POPS_PORT:-995}:995"
+      # - "${OSTICKET_MAIL_SIEVE_PORT:-4190}:4190"
+    volumes:
+      - stalwart_etc:/etc/stalwart
+      - stalwart_data:/var/lib/stalwart
+    environment:
+      STALWART_HOSTNAME: ${OSTICKET_MAIL_HOSTNAME:-}
+      STALWART_PUBLIC_URL: ${OSTICKET_MAIL_PUBLIC_URL:-}
+
+  cron:
+    # Reproducible osTicket scheduler: polls api/cron.php so osTicket actually
+    # delivers queued mail and fetches inbound IMAP replies. Defined in compose
+    # (no host crontab to reproduce elsewhere) and tied to the mail profile.
+    image: alpine:3.19
+    restart: unless-stopped
+    container_name: osticket-cron
+    profiles: ["mail"]
+    depends_on:
+      osticket:
+        condition: service_healthy
+    networks:
+      - default
+    command: >
+      sh -c 'while true; do
+        wget -q -O /dev/null http://osticket/api/cron.php || true;
+        sleep 120;
+      done'
+
 volumes:
   db_data:
   osticket_data:
+  stalwart_etc:
+  stalwart_data:
 
 networks:
   default:

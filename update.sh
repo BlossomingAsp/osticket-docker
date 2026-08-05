@@ -59,6 +59,16 @@ ver_newer() {
 
 command -v docker >/dev/null 2>&1 || die "docker not found in PATH"
 
+# Emits `--profile mail` (with trailing space) when the optional Stalwart mail
+# server is enabled in .env, so the rebuild also updates it and the cron service.
+compose_profiles() {
+    local on
+    on="$(sed -n 's/^OSTICKET_MAIL_ENABLED=//p' .env 2>/dev/null | tail -n 1 | tr -d '\r')"
+    case "${on,,}" in
+        1|yes|true|on) printf '%s ' '--profile mail' ;;
+    esac
+}
+
 current="${OSTICKET_VERSION:-1.18.4}"
 if [ -f .env ]; then
     . ./.env 2>/dev/null || true
@@ -100,4 +110,4 @@ sed -i "s/^OSTICKET_VERSION=.*/OSTICKET_VERSION=${latest}/" .env
 info "Updated OSTICKET_VERSION to ${latest} in .env"
 
 info "Rebuilding the stack (osTicket v${latest})"
-docker compose up -d --build
+docker compose $(compose_profiles)up -d --build

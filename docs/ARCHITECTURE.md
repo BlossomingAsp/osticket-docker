@@ -61,11 +61,11 @@ community plugins for **OAuth/OIDC sign-in** (Pocket ID, Google, Discord) and
 
 - `osticket_data` → mounted at `/var/www/html/include` in the `osticket` container.
   Holds `ost-config.php`, plugins, and language packs. *Shadows the image's
-  `include/`* (see §10).
+  `include/`* (see §11).
 - `db_data` → mounted at `/var/lib/mysql` in the `db` container. The database.
 
 **Networking**: a single custom bridge network `172.30.0.0/24`. The
-`discord-bot` is pinned to a static IP `172.30.0.10` (see §11.6 for why).
+`discord-bot` is pinned to a static IP `172.30.0.10` (see §12.6 for why).
 
 ---
 
@@ -74,7 +74,7 @@ community plugins for **OAuth/OIDC sign-in** (Pocket ID, Google, Discord) and
 | Path | Purpose |
 |------|---------|
 | `Dockerfile` | Builds the `osticket` image (two stages, see §4) |
-| `docker-compose.yml` | Declares `db`, `osticket`, `discord-bot`; volumes, healthchecks, env passthrough, network |
+| `docker-compose.yml` | Declares `db`, `osticket`, `discord-bot`, and the optional `mail` (Stalwart) + `cron` services (§8); volumes, healthchecks, env passthrough, network |
 | `.env.example` | Template for `.env`; documents every variable |
 | `.env` | **gitignored** — your actual secrets/configuration |
 | `install.sh` | Interactive/non-interactive installer: writes `.env`, builds, starts; checks for osTicket updates |
@@ -82,7 +82,7 @@ community plugins for **OAuth/OIDC sign-in** (Pocket ID, Google, Discord) and
 | `get-osticket.sh` | Release bootstrap: downloads a tagged source tarball and runs its `install.sh`; honors `OSTICKET_CHANNEL`/`OSTICKET_RELEASE` |
 | `docker/entrypoint.sh` | `osticket` container startup script (see §5) |
 | `docker/provision.php` | Post-install provisioning: plugins, OAuth/2FA instances, system language, queue repair (see §6) |
-| `docker/i18n/hu_HU/queue.yaml` | Corrected Hungarian queue data that overrides a defective upstream pack (see §11.1) |
+| `docker/i18n/hu_HU/queue.yaml` | Corrected Hungarian queue data that overrides a defective upstream pack (see §12.1) |
 | `docker/discord-bot/` | The Python Discord bot (see §7) |
 | `docs/ARCHITECTURE.md` | This document |
 | `README.md`, `AGENTS.md`, `CHANGELOG.md` | User guide, dev runbook, changelog |
@@ -212,11 +212,11 @@ start):
 3. **2FA instance** — if `auth-2fa` is active and has no instances, create
    one ("Two Factor Auth").
 4. **System language** — enforce `system_language = OSTICKET_LANG` (the osTicket
-   installer never persists this; see §11.2).
+   installer never persists this; see §12.2).
 5. **Queue cycle repair** — scan `ost_queue`; if any queue's `parent_id` chain
    is circular (a queue is its own ancestor), reset the node that *closes the
    cycle* to `parent_id = 0`. This is the safety net for the defective hu_HU
-   language pack (see §11.1).
+   language pack (see §12.1).
 
 > Provisioning gotchas baked into the code: it sets
 > `$_SERVER['REQUEST_METHOD']='POST'` (config forms merge empty saved config
@@ -330,7 +330,7 @@ for each mapped ticket whose status changed:
 ```
 
 The emoji map keys are matched **case-insensitively against the osTicket
-status `name`**, which is **language-dependent** (see §11.4). A ticket with no
+status `name`**, which is **language-dependent** (see §12.4). A ticket with no
 matching emoji falls back to `FALLBACK_EMOJI` (default 📥) on creation and is
 left unchanged by the poller.
 
@@ -345,18 +345,70 @@ belongs to which ticket.
 
 ---
 
-## 8. osTicket integration points
+## 8. Optional self-hosted mail server (Stalwart)
 
-### 8.1 REST API
+A single **Stalwart** container (`mail` service) provides the whole mail path for
+osTicket — SMTP (outbound notifications) and IMAP (inbound client replies) —
+plus built-in anti-spam, DKIM/SPF/DMARC and automatic Let's Encrypt (ACME).
+The only companion is a tiny `cron` service: an alpine loop that hits
+`http://osticket/api/cron.php` every 120s, because osTicket only delivers queued
+mail and fetches inbound IMAP replies when its scheduler runs.
+
+Both services are gated behind compose `profiles: ["mail"]`, so a default
+install is untouched. `install.sh`/`update.sh` detect `OSTICKET_MAIL_ENABLED=1`
+in `.env` and append `--profile mail` to their compose commands, so an enabled
+mail server comes up and updates with the stack.
+
+### 8.1 Service wiring & ports
+
+- `image: ${OSTICKET_MAIL_IMAGE:-stalwartlabs/stalwart:v0.16}`, volumes
+  `stalwart_etc:/etc/stalwart`, `stalwart_data:/var/lib/stalwart`.
+- Published ports (all overridable via `OSTICKET_MAIL_*_PORT`):
+  `25` SMTP, `587` submission, `465` SMTPS, `993` IMAPS, `443` management UI +
+  ACME (`tls-alpn-01`), and `8081:8080` HTTP management UI (avoiding osTicket's
+  `8080`). `143/110/995/4190` are commented out but uncommentable.
+- `STALWART_HOSTNAME=${OSTICKET_MAIL_HOSTNAME:-}`, plus
+  `OSTICKET_MAIL_PUBLIC_URL` → `STALWART_PUBLIC_URL` for proxy deployments.
+
+### 8.2 IPv4-only egress (the PTR gotcha — do not regress)
+
+The `mail` container sits only on the compose `default` network, which is a
+single IPv4 `/24` (`172.30.0.0/24`), so it has **no IPv6 address** and every SMTP
+delivery is IPv4. This is deliberate: providers like Contabo only allow setting
+a **single** reverse-DNS PTR record (IPv4), and forcing IPv4 means an IPv6 PTR is
+never requested. The one mandatory DNS-side record remains a **forward PTR** for
+the server's IPv4 address resolving to `mail.<domain>` — set in the VPS
+provider's panel, NOT in DNS. Additionally, outbound AND inbound **TCP 25 must
+be open** (VPS providers silently block outbound 25, which wedges the queue with
+no error; verify `nc -vz -w 5 gmail-smtp-in.l.google.com 25`), and the `mail` A
+record must be DNS-only (never a CDN proxy, which breaks SMTP/IMAP).
+
+### 8.3 osTicket integration
+
+osTicket's SMTP/IMAP settings live in its DB (admin panel), not the repo:
+
+- System email → e.g. `support@<domain>` (a mailbox created in Stalwart).
+- Outbound SMTP → host `mail`, port `587` (same compose network, no firewall).
+- Inbound mailbox → IMAP host `mail`, port `993` (SSL), same credentials.
+
+The `cron` service is what makes both directions actually move. First-run domain
++ mailbox setup happens in the Stalwart admin UI (`https://mail.<domain>/` or
+`http://<host>:8081`), which also generates the DKIM key to publish.
+
+---
+
+## 9. osTicket integration points
+
+### 9.1 REST API
 
 - Endpoint: `POST /api/tickets.json` (also `.xml`, `.email`)
 - Routed by `api/http.php` via `api/.htaccess` rewrite.
 - Auth: `X-API-Key` header; the key must be active and its IP must match the
-  caller (§11.6).
+  caller (§12.6).
 - Creates the ticket and returns the ticket **number** as the response body
   (HTTP 201).
 
-### 8.2 Signal / event system (background)
+### 9.2 Signal / event system (background)
 
 osTicket's internal `Signal::send(...)` hook points (e.g. `ticket.created`,
 `model.updated`) power its plugin ecosystem. This stack uses the plugin API
@@ -364,7 +416,7 @@ osTicket's internal `Signal::send(...)` hook points (e.g. `ticket.created`,
 install a custom osTicket plugin for the Discord integration — the bot polls
 instead.
 
-### 8.3 Database tables the stack reads/creates
+### 9.3 Database tables the stack reads/creates
 
 | Table | Who | Why |
 |-------|-----|-----|
@@ -377,13 +429,13 @@ instead.
 
 ---
 
-## 9. Environment variable reference
+## 10. Environment variable reference
 
 Everything is configured through `.env` (gitignored, mode 600). Compose
 substitutes `${VAR}` from it. Changes require `docker compose up -d` to
 re-apply (and `--build` for anything baked into the image).
 
-### 9.1 MariaDB
+### 10.1 MariaDB
 
 | Variable | Default | Used by | Purpose |
 |----------|---------|---------|---------|
@@ -392,7 +444,7 @@ re-apply (and `--build` for anything baked into the image).
 | `MARIADB_USER` | `osticket` | db, osticket, discord-bot | osTicket DB user |
 | `MARIADB_PASSWORD` | — | db, osticket, discord-bot | DB password |
 
-### 9.2 osTicket
+### 10.2 osTicket
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -400,7 +452,7 @@ re-apply (and `--build` for anything baked into the image).
 | `OSTICKET_HTTP_PORT` | `8080` | Host port → container port 80 |
 | `OSTICKET_TRUSTED_PROXIES` | empty | Comma-separated proxy IPs/CIDRs trusted for `X-Forwarded-*` (see README §Reverse proxy) |
 
-### 9.3 Auto-setup (used only when `OSTICKET_AUTOINSTALL=1`)
+### 10.3 Auto-setup (used only when `OSTICKET_AUTOINSTALL=1`)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -411,7 +463,7 @@ re-apply (and `--build` for anything baked into the image).
 | `OSTICKET_TIMEZONE` | `UTC` | Default timezone |
 | `OSTICKET_HELPDESK_URL` | — | Public helpdesk URL (no trailing slash); used for the wizard and OAuth redirect URIs |
 
-### 9.4 Admin account (auto-setup only)
+### 10.4 Admin account (auto-setup only)
 
 `OSTICKET_ADMIN_FNAME` (default `Admin`), `OSTICKET_ADMIN_LNAME` (default
 `User`), `OSTICKET_ADMIN_EMAIL` (default `admin@localhost`), `OSTICKET_ADMIN_USERNAME`
@@ -419,7 +471,7 @@ re-apply (and `--build` for anything baked into the image).
 Constraints: admin email ≠ default system email; admin username not one of
 `admin`/`admins`/`username`/`osticket`.
 
-### 9.5 Plugins & OAuth
+### 10.5 Plugins & OAuth
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -439,7 +491,7 @@ Constraints: admin email ≠ default system email; admin username not one of
 | `OSTICKET_DISCORD_CLIENT_SECRET` | — | Discord OAuth client secret |
 | `OSTICKET_DISCORD_AUTH_TARGET` | `agents` | see above |
 
-### 9.6 Discord ticket bot (experimental)
+### 10.6 Discord ticket bot (experimental)
 
 These `.env` names map to the bot container's internal variables.
 
@@ -453,14 +505,14 @@ These `.env` names map to the bot container's internal variables.
 | `OSTICKET_DISCORD_CHANNEL_FIELD` | `CHANNEL_FIELD` | empty | osTicket dynamic-field name for the preferred channel; empty folds it into the message |
 | `OSTICKET_DISCORD_POLL_INTERVAL` | `POLL_INTERVAL` | `30` | Seconds between status polls |
 | `OSTICKET_DISCORD_RATE_LIMIT` | `RATE_LIMIT` | `300` | Minimum seconds between ticket creations per Discord user (spam/DoS guard; `0` disables) |
-| `OSTICKET_DISCORD_STATUS_EMOJIS` | `STATUS_EMOJIS` | `{"open":"🟢","assigned":"🔵","answered":"💬","closed":"✅"}` | JSON map status-name → emoji (see §11.4) |
+| `OSTICKET_DISCORD_STATUS_EMOJIS` | `STATUS_EMOJIS` | `{"open":"🟢","assigned":"🔵","answered":"💬","closed":"✅"}` | JSON map status-name → emoji (see §12.4) |
 | `OSTICKET_DISCORD_FALLBACK_EMOJI` | `FALLBACK_EMOJI` | `📥` | Emoji used when a new ticket's status has no mapping |
 
 Internal, not settable via `.env`: `OSTICKET_BASE_URL` (`http://osticket:80`),
 `DB_HOST`/`DB_PORT` (`db`/`3306`), `DB_NAME`/`DB_USER`/`DB_PASSWORD` (from
 `MARIADB_*`).
 
-### 9.7 `get-osticket.sh` (release bootstrap)
+### 10.7 `get-osticket.sh` (release bootstrap)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -468,9 +520,24 @@ Internal, not settable via `.env`: `OSTICKET_BASE_URL` (`http://osticket:80`),
 | `OSTICKET_RELEASE` | `latest` | Pin an exact tag (wins over channel) |
 | `GH_TOKEN` | — | GitHub token for private-repo downloads |
 
+### 10.8 Optional mail server (Stalwart)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OSTICKET_MAIL_ENABLED` | `0` | `1` = run the `mail` + `cron` services; `install.sh`/`update.sh` then pass `--profile mail` |
+| `OSTICKET_MAIL_HOSTNAME` | — | Public mail hostname (`mail.<domain>`); → `STALWART_HOSTNAME` |
+| `OSTICKET_MAIL_IMAGE` | `stalwartlabs/stalwart:v0.16` | Stalwart image pin |
+| `OSTICKET_MAIL_PUBLIC_URL` | — | → `STALWART_PUBLIC_URL` (published base URL; set behind a reverse proxy) |
+| `OSTICKET_MAIL_SMTP_PORT` | `25` | SMTP |
+| `OSTICKET_MAIL_SUBMISSION_PORT` | `587` | SMTP submission |
+| `OSTICKET_MAIL_SMTPS_PORT` | `465` | SMTPS |
+| `OSTICKET_MAIL_IMAPS_PORT` | `993` | IMAPS |
+| `OSTICKET_MAIL_TLS_PORT` | `443` | management UI (HTTPS) + ACME |
+| `OSTICKET_MAIL_WEB_PORT` | `8081` | management UI (HTTP), avoids osTicket's `8080` |
+
 ---
 
-## 10. Volumes and the `include/` shadowing problem
+## 11. Volumes and the `include/` shadowing problem
 
 `include/` in the osTicket container is the named volume `osticket_data`. This
 is great for persistence (`ost-config.php`, plugins, language packs survive
@@ -495,12 +562,12 @@ lives in the database, so it is unaffected by volume semantics.
 
 ---
 
-## 11. Known issues, decisions & how they were solved
+## 12. Known issues, decisions & how they were solved
 
 This section is the "journey" — real problems hit while building the stack and
 how each is handled so you don't re-trip over them.
 
-### 11.1 hu_HU language pack breaks the staff panel (500 after login)
+### 12.1 hu_HU language pack breaks the staff panel (500 after login)
 
 **Symptom**: with `OSTICKET_LANG=hu_HU`, logging into `/scp/` returns an empty
 HTTP 500. `docker compose logs` shows nothing.
@@ -526,7 +593,7 @@ defaults apply (`display_errors`/`log_errors` off) and fatal errors vanish.
    on every start — a self-healing safety net (only the node that closes the
    cycle is demoted to root, so children keep their parent).
 
-### 11.2 `system_language` silently stays `en_US`
+### 12.2 `system_language` silently stays `en_US`
 
 The wizard's `Install::install()` builds `new Internationalization($lang)`
 but never writes `system_language`; without an installed pack,
@@ -536,7 +603,7 @@ bundled at build time this is fixed automatically at install; for existing
 installs, `provision.php` enforces `system_language = OSTICKET_LANG` on every
 start.
 
-### 11.3 PHP image pinning / MySQL vs MariaDB
+### 12.3 PHP image pinning / MySQL vs MariaDB
 
 - `php:8.3-apache-bookworm` is pinned. The floating `php:8.3-apache` tag
   tracks Debian trixie, where `libc-client-dev` (needed for `imap`) no longer
@@ -546,7 +613,7 @@ start.
 - Do **not** use the stale official `osticket/osticket` hub image (PHP 7 era);
   v1.18.4 needs PHP 8.2–8.4.
 
-### 11.4 Status emoji matching is language-dependent
+### 12.4 Status emoji matching is language-dependent
 
 The bot matches the emoji map against the osTicket status **`name`**, which is
 translated (e.g. hu_HU: `Megnyit`, `Megoldott`, `Lezárt`). The default map uses
@@ -554,7 +621,7 @@ English names. For a non-English install, set
 `OSTICKET_DISCORD_STATUS_EMOJIS` to your status names, e.g.:
 `{"Megnyit":"🟢","Megoldott":"✅","Lezárt":"✅"}`.
 
-### 11.5 osTicket ticket creation quirks
+### 12.5 osTicket ticket creation quirks
 
 - The ticket form has a **required `subject`**; the bot derives it from the
   message's first line.
@@ -565,7 +632,7 @@ English names. For a non-English install, set
 - The user form's `phone` field validates 7–16 digits; the bot pre-validates
   and folds bad phones into the message instead of failing the ticket.
 
-### 11.6 osTicket API keys are bound to an exact IP
+### 12.6 osTicket API keys are bound to an exact IP
 
 `ApiController::getKey()` looks the key up with
 `WHERE apikey=? AND ipaddr=<REMOTE_ADDR>` — an **exact string match**. A CIDR
@@ -575,16 +642,17 @@ or `0.0.0.0/0` does **not** authenticate. Consequently:
   dedicated compose subnet (`172.30.0.0/24`).
 - The osTicket API key's IP field must be set to `172.30.0.10`.
 
-### 11.7 `/usr/sbin/sendmail: not found`
+### 12.7 `/usr/sbin/sendmail: not found`
 
 The image has no MTA, so any osTicket attempt to send email logs this warning
 (and email features won't deliver unless you configure SMTP in the admin
 panel). It is benign for the Discord bot (which doesn't send email) but means
-outgoing email notifications require an SMTP setup in osTicket.
+outgoing email notifications require an SMTP setup in osTicket. Point osTicket's
+SMTP at the optional Stalwart `mail` service (§8) to resolve it.
 
 ---
 
-## 12. Release channels & workflow
+## 13. Release channels & workflow
 
 - **`main`** — stable development; releases are normal GitHub releases.
 - **`experimental`** — experimental features (e.g. the Discord bot); cut as
@@ -599,7 +667,7 @@ outgoing email notifications require an SMTP setup in osTicket.
 
 ---
 
-## 13. Data flows (walkthroughs)
+## 14. Data flows (walkthroughs)
 
 ### First boot (auto-setup)
 
@@ -639,7 +707,7 @@ picked up by the poller and mirrored onto the original Discord message.
 
 ---
 
-## 14. Troubleshooting cheat-sheet
+## 15. Troubleshooting cheat-sheet
 
 | Problem | Likely cause / fix |
 |---------|--------------------|
@@ -649,13 +717,13 @@ picked up by the poller and mirrored onto the original Discord message.
 | Bot container exited | Unconfigured (`DISCORD_BOT_TOKEN`/`DISCORD_CHANNEL_ID` empty) — expected; add them and `docker compose up -d` |
 | `sendmail: not found` | No MTA in the image; configure SMTP in osTicket if you need email |
 | OAuth login → provider rejects `redirect_uri` ("Not a well formed URL", mismatch) | The plugin instance was provisioned with a stale `redirectUri` (e.g. `http://localhost/api/auth/oauth2` captured during auto-install before `OSTICKET_HELPDESK_URL` was set). Set `OSTICKET_HELPDESK_URL` in `.env` to the public URL, register exactly `<URL>/api/auth/oauth2` in the IdP app, then `docker compose up -d` — provisioning now reconciles the existing instance's `redirectUri` on start |
-| osTicket version not updating | volume shadows `include/`; see §10 |
+| osTicket version not updating | volume shadows `include/`; see §11 |
 | Build fails fetching language pack | `OSTICKET_LANG` unsupported, or offline at build time (by design — loud) |
 | `docker compose up` leaves services unhealthy | recreate cleanly: `docker compose down && docker compose up -d` |
 
 ---
 
-## 15. Glossary
+## 16. Glossary
 
 - **IdP** — Identity Provider (Pocket ID, Google, Discord).
 - **OAuth2 / OIDC** — open authorization / OpenID Connect; used for sign-in.

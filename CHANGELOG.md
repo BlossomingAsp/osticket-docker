@@ -4,6 +4,13 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [v1.1.0-exp.6] - 2026-08-12
+
+### Fixed
+
+- **Discord bot reaction cleanup**: `update_reaction()` now removes every reaction the bot previously added to a ticket message (any status emoji or the fallback) before applying the current status emoji, so stale reactions never linger after a status change.
+- **Discord bot thread backfill**: mirrored tickets now post their existing osTicket conversation (client messages + staff responses) into the Discord thread — previously `last_thread_entry_id` was seeded to the current max on mirror, so the poll loop never posted pre-existing entries. Thread entries also no longer crash the poll: `_post_new_entries()` now resolves the thread with the client's `fetch_channel()` instead of the invalid `channel.fetch_channel()`.
+
 ## [v1.1.0-exp.5] - 2026-08-12
 
 ### Added
@@ -97,6 +104,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - Initial tagged release of the custom PHP 8.3 Apache image + MariaDB stack.
 
+[v1.1.0-exp.6]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.1.0-exp.6
 [v1.1.0-exp.1]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.1.0-exp.1
 [v1.0.3]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.3
 [v1.0.2]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.2

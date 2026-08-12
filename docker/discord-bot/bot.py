@@ -421,13 +421,15 @@ class TicketBot(discord.Client):
             msg = await channel.fetch_message(int(message_id))
         except discord.NotFound:
             return
-        for emoji in set(self.cfg.status_emojis.values()):
-            for reaction in msg.reactions:
-                if str(reaction.emoji) == emoji:
-                    try:
-                        await reaction.remove(self.user)
-                    except discord.HTTPException:
-                        pass
+        # Remove every reaction the bot previously added (any status emoji
+        # or the fallback) so a stale reaction never lingers next to the
+        # current status emoji.
+        for reaction in list(msg.reactions):
+            if reaction.me:
+                try:
+                    await reaction.remove(self.user)
+                except discord.HTTPException:
+                    pass
         emoji = self.emoji_for(status)
         if emoji:
             await self._react(msg, emoji)

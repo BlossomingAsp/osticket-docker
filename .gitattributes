@@ -1,0 +1,16 @@
+# Normalize text files to LF on checkout regardless of core.autocrlf.
+# Git for Windows defaults core.autocrlf=true, which checked out
+# docker/entrypoint.sh with CRLF and baked a bare \r after its "#!/bin/sh"
+# shebang into the built image -- the container kernel then reported
+# "exec /usr/local/bin/osticket-entrypoint: no such file or directory" and
+# crash-looped. eol=lf guarantees POSIX line endings for the exec/parse
+# critical files on every platform.
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker/*.php text eol=lf
+docker/*.ini text eol=lf
+docker/*.conf text eol=lf
+docker/i18n/** text eol=lf
+docker-compose.yml text eol=lf
+.gitattributes text eol=lf

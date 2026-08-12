@@ -221,11 +221,9 @@ class TicketBot(discord.Client):
             str(channel.id), "0", status_name,
             str(thread.id) if thread else None,
         )
-        # Set last_thread_entry_id to current max so only new entries are posted
-        latest_id = await asyncio.to_thread(self.db.get_latest_entry_id, ticket["number"])
-        mapping_row = await asyncio.to_thread(self.db.get_mapping_by_ticket, ticket["number"])
-        if mapping_row:
-            await asyncio.to_thread(self.db.update_last_thread_entry_id, mapping_row["id"], latest_id)
+        # Leave last_thread_entry_id at 0 so the poll loop backfills the
+        # ticket's existing conversation (client messages + staff responses)
+        # into the Discord thread under the mirrored message.
         log.info("mirrored ticket %s to Discord message %s", ticket["number"], msg.id)
 
     async def _ensure_thread(self, message, ticket_number, status_name):
@@ -256,7 +254,7 @@ class TicketBot(discord.Client):
         thread = None
         if thread_id:
             try:
-                thread = await channel.fetch_channel(int(thread_id))
+                thread = await self.fetch_channel(int(thread_id))
             except (discord.NotFound, discord.HTTPException):
                 thread = None
 

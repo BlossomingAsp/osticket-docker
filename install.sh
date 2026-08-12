@@ -244,8 +244,8 @@ DISCORD_AUTH_TARGET="${OSTICKET_DISCORD_AUTH_TARGET:-agents}"
 # a working install. Explicit OSTICKET_* exports or typed input always win.
 if [ "$SETUP_MODE" = auto ]; then
     : "${HELPDESK_NAME:=Help Desk}"
-    : "${DEFAULT_EMAIL:=helpdesk@localhost}"
-    : "${ADMIN_EMAIL:=admin@localhost}"
+    : "${DEFAULT_EMAIL:=helpdesk@osticket.local}"
+    : "${ADMIN_EMAIL:=admin@osticket.local}"
     : "${ADMIN_USERNAME:=admin1}"
 fi
 

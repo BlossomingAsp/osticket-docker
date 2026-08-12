@@ -29,8 +29,8 @@ fi
 if [ "$INSTALLED" = 0 ] && [ "${OSTICKET_AUTOINSTALL:-0}" = "1" ]; then
     echo "Auto-installing osTicket via the setup wizard..."
     : "${OSTICKET_HELPDESK_NAME:=Help Desk}"
-    : "${OSTICKET_DEFAULT_EMAIL:=helpdesk@localhost}"
-    : "${OSTICKET_ADMIN_EMAIL:=admin@localhost}"
+    : "${OSTICKET_DEFAULT_EMAIL:=helpdesk@osticket.local}"
+    : "${OSTICKET_ADMIN_EMAIL:=admin@osticket.local}"
     : "${OSTICKET_ADMIN_USERNAME:=admin1}"
     : "${OSTICKET_ADMIN_PASSWORD:?OSTICKET_ADMIN_PASSWORD required for auto-install}"
     : "${MARIADB_DATABASE:?MARIADB_DATABASE required for auto-install}"

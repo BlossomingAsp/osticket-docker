@@ -2,6 +2,13 @@
 
 All notable changes to this project. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
+## [v1.0.9] - 2026-08-12
+
+### Fixed
+
+- **Windows clones no longer crash-loop the container**: Git for Windows defaults `core.autocrlf=true`, which checked out `docker/entrypoint.sh` with CRLF and baked a `.gitattributes`-less `#!/bin/sh\r` shebang into the image — the kernel then reported `exec /usr/local/bin/osticket-entrypoint: no such file or directory` on every container start. A new `.gitattributes` now enforces LF on checkout for all scripts, the Dockerfile, and the other files baked into the image, whatever the host's `core.autocrlf`, so installs from Windows work out of the box.
+- **Auto-setup with default emails no longer fails**: the installer's fallback emails (`helpdesk@localhost`, `admin@localhost`) were rejected by osTicket's own wizard — `Validator::is_email()` refuses the `localhost` host — so a bare non-interactive `-y --auto` install died at the final step with "Valid email required". The defaults are now `helpdesk@osticket.local` / `admin@osticket.local` (still un-routable, but accepted by the validator).
+
 ## [Unreleased]
 
 ### Added

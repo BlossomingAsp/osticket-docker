@@ -41,7 +41,7 @@ Or clone and run the installer script, which asks whether to **auto-setup** (env
 
 Interactive auto-setup prompts for the language (default `en_US`). Non-interactive installs default to `en_US` too; to install in another language, export it up front, e.g. `OSTICKET_LANG=de_DE ./install.sh -y --auto`. See [Language packs](#language-packs) for changing it after install.
 
-The four required auto-setup fields fall back to sane defaults when left blank (so the one-liner works out of the box): helpdesk name `Help Desk`, default system email `helpdesk@localhost`, admin email `admin@localhost`, admin username `admin1` (the admin *password* is always randomly generated and stored in `.env`). Override any of them by exporting the matching `OSTICKET_*` variable (see [Configuration](#configuration)), e.g. `OSTICKET_HELPDESK_NAME="Acme Support" OSTICKET_ADMIN_USERNAME=aspen ./install.sh -y --auto`.
+The four required auto-setup fields fall back to sane defaults when left blank (so the one-liner works out of the box): helpdesk name `Help Desk`, default system email `helpdesk@osticket.local`, admin email `admin@osticket.local`, admin username `admin1` (the admin *password* is always randomly generated and stored in `.env`). Override any of them by exporting the matching `OSTICKET_*` variable (see [Configuration](#configuration)), e.g. `OSTICKET_HELPDESK_NAME="Acme Support" OSTICKET_ADMIN_USERNAME=aspen ./install.sh -y --auto`. (osTicket's wizard rejects `@localhost` addresses, so the defaults use the `.local` domain.)
 
 To do it by hand instead:
 

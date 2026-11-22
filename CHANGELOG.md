@@ -2,14 +2,9 @@
 
 All notable changes to this project. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
-## [v1.0.9] - 2026-08-12
-
-### Fixed
-
-- **Windows clones no longer crash-loop the container**: Git for Windows defaults `core.autocrlf=true`, which checked out `docker/entrypoint.sh` with CRLF and baked a `.gitattributes`-less `#!/bin/sh\r` shebang into the image — the kernel then reported `exec /usr/local/bin/osticket-entrypoint: no such file or directory` on every container start. A new `.gitattributes` now enforces LF on checkout for all scripts, the Dockerfile, and the other files baked into the image, whatever the host's `core.autocrlf`, so installs from Windows work out of the box.
-- **Auto-setup with default emails no longer fails**: the installer's fallback emails (`helpdesk@localhost`, `admin@localhost`) were rejected by osTicket's own wizard — `Validator::is_email()` refuses the `localhost` host — so a bare non-interactive `-y --auto` install died at the final step with "Valid email required". The defaults are now `helpdesk@osticket.local` / `admin@osticket.local` (still un-routable, but accepted by the validator).
-
 ## [Unreleased]
+
+## [v1.0.10] - 2026-11-22
 
 ### Security
 
@@ -29,6 +24,13 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 - **Interactive one-liner via process substitution**: the one-liner is now `bash <(curl -sSL .../get-osticket.sh)` — process substitution keeps stdin connected to the terminal, so `install.sh` genuinely prompts for passwords, port, and helpdesk details (piped `curl ... | sh` consumes stdin and can't prompt). Piped installs are deliberately rejected with a pointer to the correct command: `get-osticket.sh` refuses up front, and `install.sh` dies unless `-y` (non-interactive) is given. The previous `/dev/tty` redirect approach was dropped as unreliable (it failed to display prompts over SSH).
 - **`get-osticket.sh` keeps its files**: the bootstrap used to extract into a `mktemp -d` temp directory that was deleted on exit, leaving no local copy of the stack. It now extracts into `./osticket-docker/` (override with `OSTICKET_DIR`) and keeps the files, so you can manage/update the stack afterwards; only a read-only current directory falls back to a cleaned-up temp dir.
 - **OAuth instance config is declarative**: `docker/provision.php` previously created each auth-oauth2 instance once and left it untouched afterwards — so a `redirectUri` baked from the wrong helpdesk URL (e.g. `http://localhost/api/auth/oauth2` captured during auto-install) never corrected itself when `OSTICKET_HELPDESK_URL` was later set, and Discord rejected the callback with "redirect_uri: Not a well formed URL". `create_instance()` now calls `update_instance_config()` on an existing instance, reconciling the plain config fields (`redirectUri`, `clientId`, provider endpoints, scopes, attribute mappings) with the env-derived values on every start. Secrets (`clientSecret`, a `PasswordField` holding ciphertext) and `SectionBreakField` separators are left alone.
+
+## [v1.0.9] - 2026-08-12
+
+### Fixed
+
+- **Windows clones no longer crash-loop the container**: Git for Windows defaults `core.autocrlf=true`, which checked out `docker/entrypoint.sh` with CRLF and baked a `.gitattributes`-less `#!/bin/sh\r` shebang into the image — the kernel then reported `exec /usr/local/bin/osticket-entrypoint: no such file or directory` on every container start. A new `.gitattributes` now enforces LF on checkout for all scripts, the Dockerfile, and the other files baked into the image, whatever the host's `core.autocrlf`, so installs from Windows work out of the box.
+- **Auto-setup with default emails no longer fails**: the installer's fallback emails (`helpdesk@localhost`, `admin@localhost`) were rejected by osTicket's own wizard — `Validator::is_email()` refuses the `localhost` host — so a bare non-interactive `-y --auto` install died at the final step with "Valid email required". The defaults are now `helpdesk@osticket.local` / `admin@osticket.local` (still un-routable, but accepted by the validator).
 
 ## [v1.0.4] - 2026-08-03
 
@@ -99,6 +101,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - Initial tagged release of the custom PHP 8.3 Apache image + MariaDB stack.
 
+[v1.0.10]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.10
 [v1.0.3]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.3
 [v1.0.2]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.2
 [v1.0.1]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.1

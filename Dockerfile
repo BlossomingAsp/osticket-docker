@@ -1,6 +1,14 @@
+# PHP patch level is pinned on purpose (not the floating php:8.3-* tag): the
+# Oct 2026 "php2shell" RCEs (CVE-2026-109618 / CVE-2026-109619, fixed in
+# 8.3.36) and the Nov 2026 batch (CVE-2026-129289 and friends, fixed in
+# 8.3.37) both hit mod_php hardest, which is exactly this image. A pinned tag
+# that is absent locally also forces Docker to pull the fixed base image
+# instead of reusing a vulnerable cached one on `docker compose up -d --build`.
+# Bump BOTH stages together when a new PHP 8.3 security release ships.
+
 # Stage: bundle osTicket community plugins (hydrated with their composer
 # deps) so the runtime image can provision them into the include/ volume.
-FROM php:8.3-cli-bookworm AS plugin-builder
+FROM php:8.3.37-cli-bookworm AS plugin-builder
 
 # Pinned commit on the osTicket-plugins 1.17.x branch (targets the 1.18 API).
 ARG PLUGINS_COMMIT=adfef052c2aeab4d67e4892c30d2ede27e6ea627
@@ -22,7 +30,7 @@ RUN set -eux; \
     cp -r auth-oauth2 auth-2fa /opt/osticket-plugins/; \
     rm -rf /tmp/plugs.zip "/tmp/osTicket-plugins-${PLUGINS_COMMIT}"
 
-FROM php:8.3-apache-bookworm
+FROM php:8.3.37-apache-bookworm
 
 ARG OSTICKET_VERSION=1.18.4
 

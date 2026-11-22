@@ -76,7 +76,7 @@ authentication**.
 
 ## 4. Image build (`Dockerfile`)
 
-### Stage 1 — `plugin-builder` (`php:8.3-cli-bookworm`)
+### Stage 1 — `plugin-builder` (`php:8.3.37-cli-bookworm`)
 
 Bundles the community plugins from the pinned
 `osTicket/osTicket-plugins` commit (`PLUGINS_COMMIT`, default `adfef05` on the
@@ -88,7 +88,7 @@ into each plugin's `lib/`:
 
 They are copied to `/opt/osticket-plugins/` in the runtime image.
 
-### Stage 2 — runtime (`php:8.3-apache-bookworm`)
+### Stage 2 — runtime (`php:8.3.37-apache-bookworm`)
 
 1. Installs the system libraries osTicket's PHP extensions need
    (`libc-client2007e-dev` for `imap`, `libicu-dev` for `intl`, `libzip-dev`,
@@ -358,9 +358,18 @@ start.
 
 ### 10.3 PHP image pinning / MySQL vs MariaDB
 
-- `php:8.3-apache-bookworm` is pinned. The floating `php:8.3-apache` tag
-  tracks Debian trixie, where `libc-client-dev` (needed for `imap`) no longer
-  exists. `imap` is bundled in PHP 8.3 but moved to PECL in 8.4.
+- `php:8.3.37-apache-bookworm` is pinned, patch level included. The floating
+  `php:8.3-apache` tag tracks Debian trixie, where `libc-client-dev` (needed
+  for `imap`) no longer exists. `imap` is bundled in PHP 8.3 but moved to PECL
+  in 8.4. Pinning the patch (`8.3.37`, not `8.3`) also makes the fix
+  unavoidable: a tag that is not in the local image store must be pulled, so
+  `docker compose up -d --build` cannot silently rebuild on a cached base
+  image. The floor is driven by security releases — Oct 2026 php2shell
+  (CVE-2026-109618 / CVE-2026-109619, fixed in 8.3.36) and the Nov 19 2026
+  batch (CVE-2026-129289 FPM request smuggling, CVE-2026-115560 /
+  CVE-2026-126714 session deserialization, CVE-2026-129496 date UAF, ...,
+  fixed in 8.3.37). Both rounds matter here because Apache + mod_php is the
+  configuration PHP rates highest risk. Bump both stages together.
 - The DB is **MariaDB**, not MySQL 8 — MySQL 8's `caching_sha2_password` auth
   breaks osTicket's installer.
 - Do **not** use the stale official `osticket/osticket` hub image (PHP 7 era);

@@ -276,7 +276,7 @@ The container's internal Apache stays plain HTTP on port 80; the reverse proxy t
 ## Gotchas
 
 - Do **not** use the official `osticket/osticket` hub image; it is stale (PHP 7 era) and osTicket v1.18.4 requires PHP 8.2–8.4. Use the repo `Dockerfile`.
-- The image is pinned to `php:8.3-apache-bookworm`: the un-pinned `php:8.3-apache` tag now tracks Debian trixie, where `libc-client-dev` (needed to compile PHP's `imap` extension) no longer exists.
+- The image is pinned to `php:8.3.37-apache-bookworm`: the un-pinned `php:8.3-apache` tag now tracks Debian trixie, where `libc-client-dev` (needed to compile PHP's `imap` extension) no longer exists. The patch level is pinned as well, so a rebuild always pulls a known-good PHP rather than reusing a cached base image — `8.3.37` is the minimum safe version (it fixes the October 2026 "php2shell" RCEs, CVE-2026-109618 / CVE-2026-109619, plus the November 2026 batch). **Existing installs must rebuild** (`docker compose up -d --build`) to pick up the fix; a plain `docker compose restart` keeps the old PHP binary.
 - DB must be MariaDB, not MySQL 8 — MySQL 8's `caching_sha2_password` auth breaks osTicket's installer.
 - `include/` is a named volume (`osticket_data`), so `ost-config.php`, plugins, and language packs persist. The volume shadows the image's `include/`: rebuilding the image does **not** update files already in the volume.
 

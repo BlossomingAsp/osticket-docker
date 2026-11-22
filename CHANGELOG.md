@@ -11,6 +11,13 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Security
+
+- **PHP updated to 8.3.37** (was the floating `php:8.3-apache-bookworm` tag, which could resolve to any 8.3.x and, on an existing install, would not even be re-pulled). This picks up both 2026 critical rounds:
+  - **PHP 8.3.36** (Oct 21 2026) — "php2shell", CVE-2026-109618 / CVE-2026-109619: unauthenticated RCE via out-of-memory corruption and stale global state. Affects every web SAPI and is rated highest risk for **Apache + mod_php**, which is this image. Both CVEs were added to CISA's KEV catalog (exploited in the wild before disclosure).
+  - **PHP 8.3.37** (Nov 19 2026) — 17 more CVEs, 7 critical: CVE-2026-129289 (PHP-FPM request smuggling), CVE-2026-115560 / CVE-2026-126714 (session deserialization), CVE-2026-129496 (date timezone-cache use-after-free), CVE-2026-129481 (session UAF), plus high/medium fixes.
+- **Both `FROM` stages are pinned to the exact patch** (runtime and `plugin-builder`), so the fix cannot be skipped by a cached base image. Existing installs must **rebuild** — `docker compose up -d --build` — since `docker compose restart` keeps the old PHP binary.
+
 ### Added
 
 - **PHP OPcache** enabled and tuned in the image (`opcache.memory_consumption=128`, `opcache.max_accelerated_files=10000`) for a clear PHP performance win.

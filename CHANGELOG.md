@@ -4,6 +4,8 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [v1.1.0-exp.7] - 2026-11-22
+
 ### Security
 
 - **PHP updated to 8.3.37** (was the floating `php:8.3-apache-bookworm` tag, which could resolve to any 8.3.x and, on an existing install, would not even be re-pulled). This picks up both 2026 critical rounds:
@@ -111,6 +113,7 @@ All notable changes to this project. Format based on [Keep a Changelog](https://
 
 - Initial tagged release of the custom PHP 8.3 Apache image + MariaDB stack.
 
+[v1.1.0-exp.7]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.1.0-exp.7
 [v1.1.0-exp.6]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.1.0-exp.6
 [v1.1.0-exp.1]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.1.0-exp.1
 [v1.0.3]: https://github.com/BlossomingAsp/osticket-docker/releases/tag/v1.0.3
